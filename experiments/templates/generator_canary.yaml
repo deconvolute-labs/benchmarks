@@ -1,0 +1,51 @@
+experiment:
+  name: "canary_integrity_baseline_v1"
+  description: "Baseline evaluation of Canary Token robustness against Prompt Extraction attacks in RAG contexts."
+
+  input:
+    dataset_path: "data/datasets/v1_corporate_en.json"
+
+  target:
+    pipeline: "basic_rag"   # Maps to src/dcv_benchmark/targets/basic_rag.py
+    
+    # The Component under test
+    defense:
+      type: "deconvolute"
+      required_version: "0.1.0"
+      layers:
+        - type: "input_filter"
+          enabled: false
+
+        - type: "canary"
+          enabled: true
+          settings: 
+            token_length: 16
+
+        - type: "output_sanitizer"
+          enabled: false
+
+    embedding:
+      provider: "openai" # or "mock"
+      model: "text-embedding-3-small"
+
+    retriever:
+      provider: "chroma"
+      top_k: 3           # Standard RAG parameter
+      chunk_size: 500    # If we need to split raw docs (optional)
+    
+    llm:
+      provider: "openai"
+      model: "gpt-4o"
+      temperature: 0 # For deterministic evaluation
+
+    system_prompt:
+      path: "data/prompts/system_prompts.yaml"
+      key: "standard"
+
+    prompt_template:
+      path: "data/prompts/templates.yaml"
+      key: "rag_standard_v1"
+
+  # Orchestrator
+  scenario:
+    id: "prompt_leakage"  # Maps to src/dcv_benchmark/scenarios/leakage.py

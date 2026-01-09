@@ -1,0 +1,5 @@
+rag_standard_v1: |
+  Context:
+  {context}
+
+  User: {query}

@@ -1,0 +1,79 @@
+from pathlib import Path
+
+import pytest
+import yaml
+
+from dcv_benchmark.utils.experiment_loader import load_experiment
+
+
+@pytest.fixture
+def valid_experiment_data():
+    return {
+        "experiment": {
+            "name": "test_exp",
+            "description": "test",
+            "input": {"dataset_path": "data.json"},
+            "target": {
+                "pipeline": "toy_rag",
+                "system_prompt": {"path": "prompts.yaml", "key": "promptA"},
+                "prompt_template": {"path": "templates.yaml", "key": "templateA"},
+                "defense": {"type": "deconvolute"},
+                "llm": {"provider": "openai", "model": "gpt-4"},
+            },
+            "scenario": {"id": "leakage"},
+        }
+    }
+
+
+@pytest.fixture
+def experiment_file(tmp_path, valid_experiment_data):
+    """Creates a temporary valid YAML file."""
+    p = tmp_path / "valid.yaml"
+    with open(p, "w") as f:
+        yaml.dump(valid_experiment_data, f)
+    return p
+
+
+def test_load_valid_config(experiment_file, valid_experiment_data):
+    """It should load and return the experiment object."""
+    experiment = load_experiment(experiment_file)
+    assert experiment.name == "test_exp"
+    assert experiment.target.defense.type == "deconvolute"
+
+
+def test_file_not_found():
+    """It should raise FileNotFoundError for non-existent paths."""
+    with pytest.raises(FileNotFoundError):
+        load_experiment(Path("ghost.yaml"))
+
+
+def test_invalid_yaml_syntax(tmp_path):
+    """It should raise ValueError for broken YAML."""
+    p = tmp_path / "broken.yaml"
+    p.write_text("experiment: [unclosed list", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Failed to parse YAML"):
+        load_experiment(p)
+
+
+def test_missing_top_level_key(tmp_path):
+    """It should raise ValueError if 'experiment' key is missing."""
+    p = tmp_path / "bad_structure.yaml"
+    with open(p, "w") as f:
+        yaml.dump({"wrong_key": {}}, f)
+
+    with pytest.raises(ValueError, match="Missing top-level 'experiment'"):
+        load_experiment(p)
+
+
+def test_validation_missing_required_section(tmp_path, valid_experiment_data):
+    """It should detect missing required sections (e.g., 'target')."""
+    # Remove 'target' from the valid data
+    del valid_experiment_data["experiment"]["target"]
+
+    p = tmp_path / "incomplete.yaml"
+    with open(p, "w") as f:
+        yaml.dump(valid_experiment_data, f)
+
+    with pytest.raises(ValueError, match="Invalid experiment configuration"):
+        load_experiment(p)

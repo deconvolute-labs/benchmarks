@@ -1,0 +1,188 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.0, pytest-9.0.2, pluggy-1.6.0 -- /Users/David/Repositories/deconvoluteai-project/deconvolute-benchmark/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/David/Repositories/deconvoluteai-project/deconvolute-benchmark
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.0.0
+collecting ... collected 1 item
+
+tests/unit/analytics/test_reporter.py::TestReportGenerator::test_generate_success FAILED [100%]
+
+=================================== FAILURES ===================================
+__________________ TestReportGenerator.test_generate_success ___________________
+
+self = <test_reporter.TestReportGenerator object at 0x10bcf0f50>
+MockPlotter = <MagicMock name='Plotter' id='4493187056'>
+MockCalculator = <MagicMock name='SecurityMetricsCalculator' id='4493187728'>
+reporter = <dcv_benchmark.analytics.reporter.ReportGenerator object at 0x10bd09160>
+mock_config = ExperimentConfig(name='test_run', description='A test run', input=InputConfig(dataset_path='data.json'), target=Target...layers=[]), embedding=None, retriever=None, llm=None, pipeline_params={}), scenario=ScenarioConfig(id='test_scenario'))
+mock_metrics = SecurityMetrics(type='security', global_metrics=GlobalSecurityMetrics(total_samples=10, asv_score=0.0, pna_score=1.0, tp=0, fn=0, tn=10, fp=0, avg_latency_seconds=0.1, latencies_attack=[], latencies_benign=[]), by_strategy={})
+tmp_path = PosixPath('/private/var/folders/gc/yh4g1g0s0kdcs4xhf03jp0380000gn/T/pytest-of-David/pytest-37/test_generate_success0')
+
+    @patch("dcv_benchmark.analytics.reporter.SecurityMetricsCalculator")
+    @patch("dcv_benchmark.analytics.reporter.Plotter")
+    def test_generate_success(self, MockPlotter, MockCalculator, reporter, mock_config, mock_metrics, tmp_path):
+        # Setup mocks
+        mock_calc_instance = MockCalculator.return_value
+        mock_calc_instance.calculate.return_value = mock_metrics
+    
+        mock_plotter_instance = MockPlotter.return_value
+    
+        start_time = datetime(2023, 1, 1, 12, 0, 0)
+        end_time = start_time + timedelta(seconds=10)
+    
+        # Ensure traces file path is what we expect
+        expected_traces_path = tmp_path / TRACES_FILENAME
+    
+        # Call generate
+        result_path = reporter.generate(mock_config, start_time, end_time)
+    
+        # Verify calculator was called with correct path
+        mock_calc_instance.calculate.assert_called_once_with(expected_traces_path)
+    
+        # Verify plotter was called
+>       mock_plotter_instance.generate_all.assert_called_once_with(mock_metrics)
+
+tests/unit/analytics/test_reporter.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='Plotter().generate_all' id='4493736464'>
+args = (SecurityMetrics(type='security', global_metrics=GlobalSecurityMetrics(total_samples=10, asv_score=0.0, pna_score=1.0, tp=0, fn=0, tn=10, fp=0, avg_latency_seconds=0.1, latencies_attack=[], latencies_benign=[]), by_strategy={}),)
+kwargs = {}, msg = "Expected 'generate_all' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'generate_all' to be called once. Called 0 times.
+
+/opt/homebrew/Cellar/python@3.13/3.13.0_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:988: AssertionError
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.13.0-final-0 _______________
+
+Coverage XML written to file coverage.xml
+=========================== short test summary info ============================
+FAILED tests/unit/analytics/test_reporter.py::TestReportGenerator::test_generate_success
+============================== 1 failed in 1.24s ===============================
+============================= test session starts ==============================
+platform darwin -- Python 3.13.0, pytest-9.0.2, pluggy-1.6.0 -- /Users/David/Repositories/deconvoluteai-project/deconvolute-benchmark/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/David/Repositories/deconvoluteai-project/deconvolute-benchmark
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.0.0
+collecting ... collected 1 item
+
+tests/unit/analytics/test_reporter.py::TestReportGenerator::test_generate_calculation_failure FAILED [100%]
+
+=================================== FAILURES ===================================
+____________ TestReportGenerator.test_generate_calculation_failure _____________
+
+self = <test_reporter.TestReportGenerator object at 0x10b851450>
+MockPlotter = <MagicMock name='Plotter' id='4488337392'>
+MockCalculator = <MagicMock name='SecurityMetricsCalculator' id='4488338064'>
+reporter = <dcv_benchmark.analytics.reporter.ReportGenerator object at 0x10b869160>
+mock_config = ExperimentConfig(name='test_run', description='A test run', input=InputConfig(dataset_path='data.json'), target=Target...layers=[]), embedding=None, retriever=None, llm=None, pipeline_params={}), scenario=ScenarioConfig(id='test_scenario'))
+tmp_path = PosixPath('/private/var/folders/gc/yh4g1g0s0kdcs4xhf03jp0380000gn/T/pytest-of-David/pytest-38/test_generate_calculation_fail0')
+
+    @patch("dcv_benchmark.analytics.reporter.SecurityMetricsCalculator")
+    @patch("dcv_benchmark.analytics.reporter.Plotter")
+    def test_generate_calculation_failure(self, MockPlotter, MockCalculator, reporter, mock_config, tmp_path):
+        # Setup mock to raise exception
+        mock_calc_instance = MockCalculator.return_value
+        mock_calc_instance.calculate.side_effect = ValueError("Calculation failed")
+    
+        start_time = datetime.now()
+        end_time = start_time + timedelta(seconds=5)
+    
+        # Call generate
+>       result_path = reporter.generate(mock_config, start_time, end_time)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/analytics/test_reporter.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <dcv_benchmark.analytics.reporter.ReportGenerator object at 0x10b869160>
+config = ExperimentConfig(name='test_run', description='A test run', input=InputConfig(dataset_path='data.json'), target=Target...layers=[]), embedding=None, retriever=None, llm=None, pipeline_params={}), scenario=ScenarioConfig(id='test_scenario'))
+start_time = datetime.datetime(2026, 1, 12, 17, 1, 55, 437461)
+end_time = datetime.datetime(2026, 1, 12, 17, 2, 0, 437461)
+
+    def generate(
+        self, config: ExperimentConfig, start_time: datetime, end_time: datetime
+    ) -> Path:
+        """
+        Orchestrates the creation of the final report.
+    
+        1. Selects the appropriate MetricsCalculator based on the experiment type.
+        2. Computes metrics from the raw traces.jsonl file.
+        3. Combines Metadata, Config, and Metrics into a single dictionary.
+        4. Writes the result to disk.
+    
+        Args:
+            config: The full configuration object used for the run.
+            start_time: Timestamp when the run started.
+            end_time: Timestamp when the run finished.
+    
+        Returns:
+            The Path to the generated results file.
+        """
+    
+        duration = (end_time - start_time).total_seconds()
+    
+        calculator = SecurityMetricsCalculator()
+        logger.info("Calculating metrics from traces...")
+    
+        try:
+            metrics_data = calculator.calculate(self.traces_path)
+            logger.info("Generating plots...")
+            self.plotter.generate_all(metrics_data)
+        except Exception as e:
+            logger.error(f"Failed to calculate metrics: {e}", exc_info=True)
+            metrics_data = {"error": str(e), "status": "failed_calculation"}
+    
+        # Assemble the report structure
+>       report = ExperimentReport(
+            meta=ReportMeta(
+                name=config.name,
+                description=config.description,
+                timestamp_start=start_time.replace(microsecond=0),
+                timestamp_end=end_time.replace(microsecond=0),
+                duration_seconds=round(duration, 2),
+            ),
+            config=config.model_dump(),
+            metrics=metrics_data,
+        )
+E       pydantic_core._pydantic_core.ValidationError: 2 validation errors for ExperimentReport
+E       metrics.global_metrics
+E         Field required [type=missing, input_value={'error': 'Calculation fa...': 'failed_calculation'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.12/v/missing
+E       metrics.by_strategy
+E         Field required [type=missing, input_value={'error': 'Calculation fa...': 'failed_calculation'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+src/dcv_benchmark/analytics/reporter.py:62: ValidationError
+------------------------------ Captured log call -------------------------------
+ERROR    root:reporter.py:58 Failed to calculate metrics: Calculation failed
+Traceback (most recent call last):
+  File "/Users/David/Repositories/deconvoluteai-project/deconvolute-benchmark/src/dcv_benchmark/analytics/reporter.py", line 54, in generate
+    metrics_data = calculator.calculate(self.traces_path)
+  File "/opt/homebrew/Cellar/python@3.13/3.13.0_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py", line 1167, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.0_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py", line 1171, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.0_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py", line 1226, in _execute_mock_call
+    raise effect
+ValueError: Calculation failed
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.13.0-final-0 _______________
+
+Coverage XML written to file coverage.xml
+=========================== short test summary info ============================
+FAILED tests/unit/analytics/test_reporter.py::TestReportGenerator::test_generate_calculation_failure
+============================== 1 failed in 0.78s ===============================

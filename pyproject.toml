@@ -1,0 +1,63 @@
+[project]
+name = "deconvolute-benchmark"
+version = "0.1.0"
+description = "TODO"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "openai",
+    "pyyaml",
+    "deconvolute",
+    "chromadb>=0.4.0",
+    "matplotlib>=3.10.8",
+]
+
+[project.scripts]
+dcv-bench = "dcv_benchmark.main:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.11",
+    "types-pyyaml>=6.0.12.20250915",
+]
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "S", "UP"]
+ignore = [
+  "S101", # Ignore "assert" warnings
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["S105", "S106", "S101"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = ["tests/"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra -q --cov=dcv_benchmark --cov-report=xml"
