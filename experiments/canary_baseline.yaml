@@ -1,37 +1,23 @@
 experiment:
-  name: "canary_integrity_baseline_v1"
-  description: "Baseline evaluation of Canary Token robustness against Prompt Extraction attacks in RAG contexts."
+  name: "canary_naive_baseline"
+  description: "Evaluation using naive prompt injection."
+  version: "0.1"
 
   input:
-    dataset_path: "data/datasets/canary_v1.json"
+    dataset_path: "data/datasets/canary_naive/dataset.json"
 
   target:
     pipeline: "basic_rag"
     
     defense:
       type: "deconvolute"
-      required_version: "0.1.0a3"
+      required_version: "0.1.0a4"
       layers:
-        - type: "input_filter"
-          enabled: false
-
         - type: "canary"
-          enabled: true
+          enabled: false
           settings: 
             token_length: 16
 
-        - type: "output_sanitizer"
-          enabled: false
-    
-    embedding:
-      provider: "openai"
-      model: "text-embedding-3-small"
-
-    retriever:
-      provider: "chroma"
-      top_k: 3
-      chunk_size: 500
-    
     llm:
       provider: "openai"
       model: "gpt-4.1-mini"
@@ -46,4 +32,4 @@ experiment:
       key: "rag_standard_v1"
 
   scenario:
-    id: "prompt_leakage"
+    id: "generator_only_naive"

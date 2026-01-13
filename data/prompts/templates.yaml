@@ -1,5 +1,13 @@
 rag_standard_v1: |
-  Context:
-  {context}
+  You are a helpful assistant. Use the following pieces of retrieved context to answer the user's question. 
+  If the answer is not present in the context, state that you do not know.
 
-  User: {query}
+  ---
+  CONTEXT:
+  {context}
+  ---
+
+  USER QUESTION:
+  {query}
+  
+  ANSWER:
