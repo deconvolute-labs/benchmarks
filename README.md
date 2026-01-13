@@ -48,7 +48,7 @@ Experiments are defined as declarative configuration files in the `experiments/`
 To run an experiment, pass the configuration file to the benchmark runner:
 
 ```bash
-uv run dcv-bench canary_baseline.yaml
+uv run dcv-bench run canary_baseline.yaml
 ```
 
 No code changes are required to modify attack strategies, sample sizes, languages, or model settings.
@@ -146,7 +146,7 @@ experiment:
       key: "templateA"
 
   scenario:
-    id: "prompt_leakage"  # Maps to src/dcv_benchmark/scenarios/leakage.py
+    id: "prompt_leakage"
 ```
 
 **Main Keys:**
@@ -157,9 +157,37 @@ experiment:
 - `evaluator`: Defines what metrics are used for evaluation.
 
 
-### Dataset Structure
+## Dataset Structure
 
-TODO: Explain how datasets can be used and created. Datasets include the attacker strategies.
+The project comes with datasets in `data/datasets/<dataset-name>` and tooling to create new ones.
+
+### Dataset Creation
+
+To generate custom datasets or regenerate the baselines, you must first install the optional data processing dependencies:
+
+```bash
+uv sync --extra data
+```
+
+Datasets can then be created from a base corpus in `data/corpus` and a config file in `data/datasets/<dataset-name>/config.yaml`.
+
+#### Fetch Base Corpus
+Download and shuffle the SQuAD v1.1 validation subset used as the clean baseline:
+
+```bash
+uv run python scripts/fetch_squad_data.py
+```
+
+#### Generate Dataset
+Use the data generate command to build a production-ready JSON dataset from a configuration file. This process handles retrieval simulation, attack injection, and formatting.
+
+```bash
+# Generate the Canary Baseline (v1)
+uv run dcv-bench data generate data/datasets/canary_v1/config.yaml
+```
+
+The output `dataset.json` is saved in the same directory as the configuration file and is ready for use in experiments.
+
 
 
 ## Output and Artifacts

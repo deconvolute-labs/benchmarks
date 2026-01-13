@@ -15,6 +15,13 @@ dependencies = [
 [project.scripts]
 dcv-bench = "dcv_benchmark.main:main"
 
+[project.optional-dependencies]
+data = [
+    "datasets>=4.4.2",
+    "sentence-transformers>=5.2.0",
+    "tqdm>=4.67.1",
+]
+
 [dependency-groups]
 dev = [
     "mypy>=1.19.1",
@@ -30,6 +37,7 @@ package = true
 line-length = 88
 target-version = "py313"
 src = ["src", "tests"]
+exclude = ["scripts"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -51,7 +59,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
-exclude = ["tests/"]
+exclude = ["tests/", "scripts/"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
