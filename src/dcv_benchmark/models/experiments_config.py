@@ -69,6 +69,7 @@ class ScenarioConfig(BaseModel):
 class ExperimentConfig(BaseModel):
     name: str
     description: str = ""
+    version: str = "N/A"
 
     input: InputConfig
     target: TargetConfig

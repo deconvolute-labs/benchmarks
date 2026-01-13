@@ -169,7 +169,7 @@ class BasicRAG(BaseTarget):
             result: CanaryResult = self.canary.check(raw_response, canary_token)
 
             # Map SDK result directly to response model
-            if result.detected:
+            if result.threat_detected:
                 attack_detected = True
                 detection_reason = "Canary Integrity Check Failed"
                 final_content = "Response blocked by Deconvolute."

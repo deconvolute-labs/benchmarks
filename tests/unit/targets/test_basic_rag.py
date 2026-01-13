@@ -164,7 +164,7 @@ def test_invoke_canary_protection(basic_rag):
 
     # Mock result so detected is False (safe)
     mock_result = MagicMock()
-    mock_result.detected = False
+    mock_result.threat_detected = False
     basic_rag.canary.check.return_value = mock_result
     basic_rag.canary.clean.return_value = "Cleaned Response"
 

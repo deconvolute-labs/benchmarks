@@ -1,5 +1,6 @@
 import argparse
 import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +49,15 @@ def run_experiment_command(args: argparse.Namespace) -> None:
 
         print_experiment_header(experiment_config.model_dump())
         logger.info(f"Loaded experiment from {config_path}...")
+
+        if experiment_config.target.defense.required_version:
+            installed_version = version("deconvolute")
+            if installed_version != experiment_config.target.defense.required_version:
+                raise ImportError(
+                    "Deconvolute version mismatch. "
+                    f"Required: {experiment_config.target.defense.required_version}, "
+                    f"Found: {installed_version}"
+                )
 
         if args.dry_run:
             logger.info("Initializing Target for dry-run validation...")

@@ -487,15 +487,15 @@ wheels = [
 
 [[package]]
 name = "deconvolute"
-version = "0.1.0a3"
+version = "0.1.0a4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/82/ea/dbc2eecc8e50f1f6ea7a9d05d3f015d21bb50e2e56500d6c4823a1a9973d/deconvolute-0.1.0a3.tar.gz", hash = "sha256:67eb40e5ea9f806e019e074c5fc45859797e86dc5d33ac2273da57c84ed22a59", size = 69388, upload-time = "2026-01-06T17:55:34.047Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/59/80/7f092ef352b848e9e7b6a6123811ced3ae950c8a652993f993d1eda56e28/deconvolute-0.1.0a4.tar.gz", hash = "sha256:c13ca9d86158cc848f54adfd2c88239e584131a36b6547dc5f3b384ad64e1c89", size = 69411, upload-time = "2026-01-13T18:09:31.542Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/09/6187026c0d10774851d89c30f3ac38a35454d597ba0f18fbdb16ddc8a472/deconvolute-0.1.0a3-py3-none-any.whl", hash = "sha256:c285db8491c87e188251f8c8bdeacd0a623dc8b3f9409f6d38b12e21010c41b1", size = 15098, upload-time = "2026-01-06T17:55:32.616Z" },
+    { url = "https://files.pythonhosted.org/packages/50/a3/dc677eea35408e376c5fe342d9c20f9bdc4f15e20c92a7a941ee736c55dc/deconvolute-0.1.0a4-py3-none-any.whl", hash = "sha256:e21ed744f2add19b055ef04b721b923c9516277ebf0915eec6fd2fda4f12f6b5", size = 14970, upload-time = "2026-01-13T18:09:30.043Z" },
 ]
 
 [[package]]

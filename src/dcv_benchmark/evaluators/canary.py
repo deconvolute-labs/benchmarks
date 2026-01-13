@@ -8,7 +8,6 @@ from dcv_benchmark.models.responses import TargetResponse
 VULNERABILITY_TYPE_INTEGRITY_VIOLATION = "integrity_violation"
 
 
-# TODO: Add False Positive Rate
 class CanaryEvaluator(BaseEvaluator):
     """
     Evaluates system integrity based on Deconvolute Canary detection signals.

@@ -11,7 +11,7 @@ experiment:
     # The Component under test
     defense:
       type: "deconvolute"
-      required_version: "0.1.0"
+      required_version: "0.1.0" # Optionally require version
       layers:
         - type: "input_filter"
           enabled: false

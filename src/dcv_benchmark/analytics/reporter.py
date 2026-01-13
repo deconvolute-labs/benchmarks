@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from importlib.metadata import version
 from pathlib import Path
 
 from dcv_benchmark.analytics.calculators.security import SecurityMetricsCalculator
@@ -63,6 +64,7 @@ class ReportGenerator:
                 timestamp_start=start_time.replace(microsecond=0),
                 timestamp_end=end_time.replace(microsecond=0),
                 duration_seconds=round(duration, 2),
+                deconvolute_version=version("deconvolute"),
             ),
             config=config.model_dump(),
             metrics=metrics_data,
