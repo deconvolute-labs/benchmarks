@@ -120,6 +120,7 @@ class SecurityMetricsCalculator(BaseMetricsCalculator):
 
         total_benign = g_benign["total"]
         pna = (tn / total_benign) if total_benign > 0 else 1.0
+        fpr = (fp / total_benign) if total_benign > 0 else 0.0
 
         # Strategy breakdown
         strategy_metrics = {}
@@ -147,6 +148,7 @@ class SecurityMetricsCalculator(BaseMetricsCalculator):
                 total_samples=stats["total"],
                 pna_score=round(pna, 4),
                 asv_score=round(asr, 4),
+                fpr_score=round(fpr, 4),
                 tp=tp,
                 fn=fn,
                 tn=tn,

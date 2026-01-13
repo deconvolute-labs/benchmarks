@@ -41,6 +41,7 @@ def mock_metrics():
             total_samples=10,
             pna_score=1.0,
             asv_score=0.0,
+            fpr_score=0.0,
             tp=0,
             fn=0,
             tn=10,
