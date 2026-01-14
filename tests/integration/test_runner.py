@@ -30,8 +30,8 @@ TEST_DATASET_CONTENT = {
             "configuration": {},
         },
         "corpus_info": {
-            "source_files": ["data/corpus/clean_v1.txt", "data/corpus/poisoned_v1.txt"],
-            "pre_chunked_file": "data/corpus/knowledge_base_v1.jsonl",
+            "source_files": ["clean_v1.json", "poisoned_v1.json"],
+            "pre_chunked_file": "knowledge_base_v1.jsonl",
             "ingestion_params": {
                 "chunk_size": 500,
                 "chunk_overlap": 50,
@@ -142,8 +142,8 @@ def test_baseline_flow(tmp_path, test_dataset_file, mock_target_response):
                 layers=[DefenseLayerConfig(type="canary", enabled=False, settings={})],
             ),
             llm=LLMConfig(provider="openai", model="gpt-4o"),
-            system_prompt={"path": "dummy", "key": "dummy"},
-            prompt_template={"path": "dummy", "key": "dummy"},
+            system_prompt={"file": "dummy", "key": "dummy"},
+            prompt_template={"file": "dummy", "key": "dummy"},
             pipeline_params={},
         ),
         scenario=ScenarioConfig(id="test"),
@@ -170,7 +170,7 @@ def test_baseline_flow(tmp_path, test_dataset_file, mock_target_response):
 
     # We assert that metrics were calculated, confirming the evaluator ran successfully
     assert global_m["total_samples"] == 4
-    assert global_m["asv_score"] > 0.0  # Proves attacks were registered
+    assert global_m["asr_score"] > 0.0  # Proves attacks were registered
 
 
 def test_full_execution_flow(tmp_path, test_dataset_file, mock_target_response):
@@ -189,8 +189,8 @@ def test_full_execution_flow(tmp_path, test_dataset_file, mock_target_response):
                 layers=[DefenseLayerConfig(type="canary", enabled=True, settings={})],
             ),
             llm=LLMConfig(provider="openai", model="gpt-4o"),
-            system_prompt={"path": "dummy", "key": "dummy"},
-            prompt_template={"path": "dummy", "key": "dummy"},
+            system_prompt={"file": "dummy", "key": "dummy"},
+            prompt_template={"file": "dummy", "key": "dummy"},
             pipeline_params={},
         ),
         scenario=ScenarioConfig(id="test"),
@@ -215,7 +215,7 @@ def test_full_execution_flow(tmp_path, test_dataset_file, mock_target_response):
     plots_dir = run_dir / "plots"
     assert plots_dir.exists()
     assert (plots_dir / "confusion_matrix.png").exists()
-    assert (plots_dir / "asv_by_strategy.png").exists()
+    assert (plots_dir / "asr_by_strategy.png").exists()
     assert (plots_dir / "latency_distribution.png").exists()
 
     # Verify results data
@@ -233,13 +233,13 @@ def test_full_execution_flow(tmp_path, test_dataset_file, mock_target_response):
     assert global_m["fp"] == 1
 
     # Check scores
-    assert global_m["asv_score"] == 0.5
+    assert global_m["asr_score"] == 0.5
     assert global_m["pna_score"] == 0.5
 
     # Check strategy metrics
     strat_m = metrics["by_strategy"]["mock_strategy"]
     assert strat_m["samples"] == 2
-    assert strat_m["asv"] == 0.5
+    assert strat_m["asr"] == 0.5
     assert strat_m["detected_count"] == 1
     assert strat_m["missed_count"] == 1
 

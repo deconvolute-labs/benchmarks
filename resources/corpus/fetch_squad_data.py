@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 COUNT = 300
-OUTPUT_DIR = Path("data/corpus")
+OUTPUT_DIR = Path("resources/corpus")
 OUTPUT_FILE = OUTPUT_DIR / "squad_subset_300.json"
 SEED = 42  # For reproducibility
 

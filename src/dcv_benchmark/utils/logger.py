@@ -70,13 +70,34 @@ def print_run_summary(
     failed = total - success
     pass_rate = (success / total * 100) if total > 0 else 0.0
 
-    logger.info("=" * 65)
+    logger.info("=" * 90)
     logger.info("RUN COMPLETE")
-    logger.info("=" * 65)
+    logger.info("=" * 90)
     logger.info(f"Total Samples:  {total}")
     logger.info(f"Passed:         {success}")
     logger.info(f"Failed:         {failed}")
     logger.info(f"Pass Rate:      {pass_rate:.1f}%")
     logger.info(f"Duration:       {duration}")
     logger.info(f"Artifacts:      {artifacts_path}")
-    logger.info("=" * 65)
+    logger.info("=" * 90)
+
+
+def print_dataset_header(config: dict[str, Any]) -> None:
+    """Prints a formatted header for the dataset generation."""
+    # We expect a DataFactoryConfig dumped as dict
+    name = config.get("dataset_name", "Unnamed Dataset")
+    strategy = config.get("attack_strategy", "Unknown")
+    corpus = config.get("source_file", "N/A")
+    rate = config.get("attack_rate", 0.0)
+
+    logger = get_logger()
+
+    logger.info("")
+    logger.info("=" * 90)
+    logger.info(f"DATASET GENERATION: {name}")
+    logger.info("-" * 90)
+    logger.info(f"Corpus    : {corpus}")
+    logger.info(f"Strategy  : {strategy.upper()}")
+    logger.info(f"Inj. Rate : {rate * 100:.0f}%")
+    logger.info("=" * 90)
+    logger.info("")

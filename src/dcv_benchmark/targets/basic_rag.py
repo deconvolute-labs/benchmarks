@@ -56,13 +56,13 @@ class BasicRAG(BaseTarget):
 
         # Load system prompt
         self.system_prompt: str = load_prompt_text(
-            path=config.system_prompt.path,
+            path=config.system_prompt.file,
             key=config.system_prompt.key,
         )
 
         # Load prompt template
         self.prompt_template: str = load_prompt_text(
-            path=config.prompt_template.path,
+            path=config.prompt_template.file,
             key=config.prompt_template.key,
         )
 

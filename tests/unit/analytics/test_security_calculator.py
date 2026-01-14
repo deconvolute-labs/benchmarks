@@ -37,7 +37,7 @@ def test_calculator_empty_trace(calculator, traces_file):
     metrics = calculator.calculate(traces_file)
 
     assert metrics.global_metrics.total_samples == 0
-    assert metrics.global_metrics.asv_score == 0.0
+    assert metrics.global_metrics.asr_score == 0.0
     assert metrics.global_metrics.pna_score == 1.0
     assert metrics.global_metrics.avg_latency_seconds == 0.0
 
@@ -81,7 +81,7 @@ def test_calculator_basic_attack_passed(calculator, traces_file):
     assert gm.total_samples == 1
     assert gm.tp == 1
     assert gm.fn == 0
-    assert gm.asv_score == 0.0  # 0/1 failed
+    assert gm.asr_score == 0.0  # 0/1 failed
 
 
 def test_calculator_basic_attack_failed(calculator, traces_file):
@@ -95,7 +95,7 @@ def test_calculator_basic_attack_failed(calculator, traces_file):
     assert gm.total_samples == 1
     assert gm.tp == 0
     assert gm.fn == 1
-    assert gm.asv_score == 1.0  # 1/1 failed
+    assert gm.asr_score == 1.0  # 1/1 failed
 
 
 def test_calculator_mixed_scenario(calculator, traces_file):
@@ -126,7 +126,7 @@ def test_calculator_mixed_scenario(calculator, traces_file):
 
     # Check scores
     # ASR = FN / Total Attacks = 2 / 3 = 0.6667
-    assert gm.asv_score == pytest.approx(0.6667, abs=0.0001)
+    assert gm.asr_score == pytest.approx(0.6667, abs=0.0001)
     # PNA = TN / Total Benign = 1 / 2 = 0.5
     assert gm.pna_score == 0.5
 
@@ -139,10 +139,10 @@ def test_calculator_mixed_scenario(calculator, traces_file):
     assert strat1.samples == 2
     assert strat1.detected_count == 1
     assert strat1.missed_count == 1
-    assert strat1.asv == 0.5
+    assert strat1.asr == 0.5
 
     strat2 = metrics.by_strategy["strat2"]
     assert strat2.samples == 1
     assert strat2.detected_count == 0
     assert strat2.missed_count == 1
-    assert strat2.asv == 1.0
+    assert strat2.asr == 1.0

@@ -4,16 +4,14 @@ from pathlib import Path
 
 from dcv_benchmark.analytics.calculators.security import SecurityMetricsCalculator
 from dcv_benchmark.analytics.plotter import Plotter
+from dcv_benchmark.constants import RESULTS_ARTIFACT_FILENAME, TRACES_FILENAME
 from dcv_benchmark.models.experiments_config import ExperimentConfig
 from dcv_benchmark.models.metrics import SecurityMetrics
 from dcv_benchmark.models.report import ExperimentReport, ReportMeta
+from dcv_benchmark.utils.helper import _sanitize_config_paths
 from dcv_benchmark.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-RESULTS_ARTIFACT_FILENAME = "results.json"
-TRACES_FILENAME = "traces.jsonl"
 
 
 class ReportGenerator:
@@ -56,6 +54,9 @@ class ReportGenerator:
         logger.info("Generating plots...")
         self.plotter.generate_all(metrics_data)
 
+        config_dict = config.model_dump()
+        sanitized_config = _sanitize_config_paths(config_dict)
+
         # Assemble the report structure
         report = ExperimentReport(
             meta=ReportMeta(
@@ -66,7 +67,7 @@ class ReportGenerator:
                 duration_seconds=round(duration, 2),
                 deconvolute_version=version("deconvolute"),
             ),
-            config=config.model_dump(),
+            config=sanitized_config,
             metrics=metrics_data,
         )
 

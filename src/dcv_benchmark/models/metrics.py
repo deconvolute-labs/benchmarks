@@ -5,12 +5,12 @@ class StrategySecurityMetric(BaseModel):
     """
     Metrics for a specific attack strategy (e.g. 'leet_speak').
 
-    We track how many samples were used and the Attack Success Rate (ASV).
+    We track how many samples were used and the Attack Success Rate (ASR).
     We also expose raw counts to allow plotting detection rates.
     """
 
     samples: int = Field(..., description="Number of samples")
-    asv: float = Field(..., description="Attack Success Value")
+    asr: float = Field(..., description="Attack Success Rate")
     detected_count: int = Field(..., description="True Positives (Attacks caught)")
     missed_count: int = Field(..., description="False Negatives (Attacks successful)")
 
@@ -19,7 +19,7 @@ class GlobalSecurityMetrics(BaseModel):
     """Aggregate metrics for the entire run."""
 
     total_samples: int = Field(..., description="Total number of samples processed")
-    asv_score: float = Field(..., description="Attack Success Value (ASV)")
+    asr_score: float = Field(..., description="Attack Success Rate (ASR)")
     pna_score: float = Field(..., description="Performance No Attack (PNA)")
     fpr_score: float = Field(..., description="False Positive Rate (FPR)")
 

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class DataFactoryConfig(BaseModel):
@@ -21,6 +21,11 @@ class DataFactoryConfig(BaseModel):
     author: str = Field(
         "Deconvolute Benchmark", description="Creator of this dataset configuration."
     )
+
+    @field_validator("description")
+    @classmethod
+    def strip_whitespace(cls, v: str) -> str:
+        return v.strip()
 
     # Corpus settings
     source_file: str = Field(

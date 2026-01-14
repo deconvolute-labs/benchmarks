@@ -1,5 +1,6 @@
 # Deconvolute SDK Integrity Benchmark
 
+[![CI](https://github.com/daved01/deconvolute-benchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/daved01/deconvolute-benchmark/actions/workflows/ci.yml)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/)
 [![Dependency Manager: uv](https://img.shields.io/badge/uv-managed-purple)](https://github.com/astral-sh/uv)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -39,16 +40,24 @@ Optionally, activate the environment with `source .venv/bin/activate` so you don
 
 ### Run an Experiment
 
-Experiments are defined as declarative configuration files in the `experiments/` directory. Each experiment specifies:
-- System prompt and integrity mechanism configuration
-- Retrieval setup
-- Attack strategies and sample generation
-- Evaluation rules and metrics
+Experiments are organized as scenarios in the `scenario` directory. Each scenario folder (e.g. `scenarios/example/`) is a self-contained unit holding:
+- `experiment.yaml`: The benchmark definition.
+- `dataset_config.yaml`: The recipe to generate the attack dataset.
+- `dataset.json`: The actual dataset used (ground truth).
 
 To run an experiment, pass the configuration file to the benchmark runner:
 
 ```bash
-uv run dcv-bench run canary_baseline.yaml
+uv run dcv-bench run example
+```
+
+**Note:** If `dataset.json` is missing, the runner will automatically attempt to generate it using the scenario's `dataset_config.yaml` before running the experiment.
+
+You can also run variants (e.g. `experiment_gpt4.yaml`) using the colon syntax:
+
+```bash
+# Runs scenarios/example/experiment_gpt4.yaml
+uv run dcv-bench run example:gpt4
 ```
 
 No code changes are required to modify attack strategies, sample sizes, languages, or model settings.
@@ -79,7 +88,7 @@ We map every result into one of four quadrants:
 
 
 
-**ASV (Attack Success Value):** The percentage of attacks that bypassed the defense.
+**ASR (Attack Success Rate):** The percentage of attacks that bypassed the defense.
 
 - Formula: FN / Total Attacks
 - Goal: 0.0 (0%)
@@ -98,9 +107,6 @@ Each template contains metadata such as experiment `version`, `name`, a `descrip
 experiment:
   # Metadata
   # ...
-
-  input:
-    dataset_path: "data/datasets/v1_corporate.json"
 
   target:
     pipeline: "basic_rag"   # Maps to src/dcv_benchmark/targets/basic_rag.py
@@ -137,12 +143,12 @@ experiment:
 
     # Fixed system instructions
     system_prompt:
-      path: "data/prompts/system_prompts.yaml"
+      file: "system_prompts.yaml"
       key: "promptA"
 
     # Templates with placeholders for 'query' and 'context'
     prompt_template:
-      path: "data/prompts/templates.yaml"
+      file: "templates.yaml"
       key: "templateA"
 
   scenario:
@@ -159,7 +165,7 @@ experiment:
 
 ## Dataset Structure
 
-The project comes with datasets in `data/datasets/<dataset-name>` and tooling to create new ones.
+The project organizes datasets within specific scenario folders in `scenarios/<scenario-name>` (e.g. `scenarios/example/dataset.json`).
 
 ### Dataset Creation
 
@@ -169,41 +175,42 @@ To generate custom datasets or regenerate the baselines, you must first install 
 uv sync --extra data
 ```
 
-Datasets can then be created from a base corpus in `data/corpus` and a config file in `data/datasets/<dataset-name>/config.yaml`.
+Datasets are created using a base corpus (located in `resources/corpus`) and a configuration file named `dataset_config.yaml` found in the scenario folder.
 
 #### Fetch Base Corpus
 Download and shuffle the SQuAD v1.1 validation subset used as the clean baseline:
 
 ```bash
-uv run python scripts/fetch_squad_data.py
+uv run python resources/corpus/fetch_squad_data.py
 ```
 
 #### Generate Dataset
-Use the data generate command to build a production-ready JSON dataset from a configuration file. This process handles retrieval simulation, attack injection, and formatting.
+Use the `data generate` command to build a production-ready JSON dataset. You can simply pass the scenario name, and the tool will look for `dataset_config.yaml` in that folder.
 
 ```bash
-# Generate the Canary Baseline (v1)
-uv run dcv-bench data generate data/datasets/canary_v1/config.yaml
+# Generate the dataset for the 'example' scenario
+uv run dcv-bench data generate example
 ```
 
-The output `dataset.json` is saved in the same directory as the configuration file and is ready for use in experiments.
-
+The output `dataset.json` is saved in the scenario directory and is ready for use in experiments.
 
 
 ## Output and Artifacts
 
-Each experiment run produces a timestamped result directory under `results/`.
+Each experiment run produces a timestamped directory `run_<timestamp>` under `results/` next to the experiment config used for that run.
 
 ```bash
-results/
-└── canary_baseline_v1_20260109_1830/
-    ├── results.json                  # Run manifest (summary + config)
-    ├── traces.jsonl                  # Line-by-line execution traces (Debugging Data)
-    └── plots/
-        ├── confusion_matrix.png      # TP/FN/FP/TN Heatmap
-        ├── asv_by_strategy.png       # Vulnerability by Attack Type
-        └── latency_distribution.png  # Performance Overhead
-```
+scenarios/
+└── <scenario_name>/
+    └── results/
+        └── run_<timestamp>/
+            ├── results.json                  # Run manifest (summary + config)
+            ├── traces.jsonl                  # Line-by-line execution traces (Debugging Data)
+            └── plots/
+                ├── confusion_matrix.png      # TP/FN/FP/TN Heatmap
+                ├── asr_by_strategy.png       # Vulnerability by Attack Type
+                └── latency_distribution.png  # Performance Overhead
+  ```
 
 `results.json` is the authoritative artifact for a run. It contains:
 - Metadata and timing information
@@ -234,7 +241,7 @@ Example structure:
     "type": "security",
       "global_metrics": {
         "total_samples": 100,
-        "asv_score": 0.05,      
+        "asr_score": 0.05,      
         "pna_score": 0.98,      
         "tp": 45,
         "fn": 5,
@@ -251,7 +258,7 @@ Example structure:
       "by_strategy": {
         "context_flooding": { 
           "samples": 25, 
-          "asv": 0.20, 
+          "asr": 0.20, 
           "detected_count": 20, 
           "missed_count": 5 
         }

@@ -1,10 +1,7 @@
 experiment:
-  name: "canary_naive"
+  name: "canary_naive_baseline"
   description: "Evaluation using naive prompt injection."
   version: "0.1"
-
-  input:
-    dataset_path: "data/datasets/canary_naive/dataset.json"
 
   target:
     pipeline: "basic_rag"
@@ -14,7 +11,7 @@ experiment:
       required_version: "0.1.0a4"
       layers:
         - type: "canary"
-          enabled: true
+          enabled: false
           settings: 
             token_length: 16
 
@@ -24,11 +21,11 @@ experiment:
       temperature: 0
 
     system_prompt:
-      path: "data/prompts/system_prompts.yaml"
+      file: "system_prompts.yaml"
       key: "gakh_bahsi_baseline"
 
     prompt_template:
-      path: "data/prompts/templates.yaml"
+      file: "templates.yaml"
       key: "rag_standard_v1"
 
   scenario:

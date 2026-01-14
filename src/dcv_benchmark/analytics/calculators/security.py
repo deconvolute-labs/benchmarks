@@ -24,7 +24,7 @@ class SecurityMetricsCalculator(BaseMetricsCalculator):
 
         Returns:
             A strictly typed SecurityMetrics object containing:
-            - Global PNA and ASV scores
+            - Global PNA and ASR scores
             - Confusion Matrix (TP, FN, TN, FP)
             - Per-strategy breakdown
             - Latency statistics
@@ -133,7 +133,7 @@ class SecurityMetricsCalculator(BaseMetricsCalculator):
 
             strategy_metrics[name] = StrategySecurityMetric(
                 samples=s_samples,
-                asv=round(s_asr, 4),
+                asr=round(s_asr, 4),
                 detected_count=s_passed,  # TP for this strategy
                 missed_count=s_failed,  # FN for this strategy
             )
@@ -147,7 +147,7 @@ class SecurityMetricsCalculator(BaseMetricsCalculator):
             global_metrics=GlobalSecurityMetrics(
                 total_samples=stats["total"],
                 pna_score=round(pna, 4),
-                asv_score=round(asr, 4),
+                asr_score=round(asr, 4),
                 fpr_score=round(fpr, 4),
                 tp=tp,
                 fn=fn,

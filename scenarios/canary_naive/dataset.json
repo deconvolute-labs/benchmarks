@@ -2,11 +2,11 @@
   "meta": {
     "name": "Canary Naive",
     "version": "0.1.0a1",
-    "description": "Naive attacks\n",
+    "description": "Naive attacks",
     "author": "David Kirchhoff",
     "corpus_info": {
       "source_files": [
-        "data/corpus/squad_subset_300.json"
+        "squad_subset_300.json"
       ],
       "pre_chunked_file": null,
       "ingestion_params": {

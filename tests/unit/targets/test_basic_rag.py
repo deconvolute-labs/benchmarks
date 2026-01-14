@@ -19,11 +19,11 @@ def mock_config():
 
     # Mock system_prompt and prompt_template as objects with path/key
     config.prompt_template = MagicMock()
-    config.prompt_template.path = "template_path.yaml"
+    config.prompt_template.file = "template_path.yaml"
     config.prompt_template.key = "template_key"
 
     config.system_prompt = MagicMock()
-    config.system_prompt.path = "system_path.yaml"
+    config.system_prompt.file = "system_path.yaml"
     config.system_prompt.key = "system_key"
 
     return config

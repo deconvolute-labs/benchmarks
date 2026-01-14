@@ -5,7 +5,7 @@ import numpy as np
 
 from dcv_benchmark.models.metrics import SecurityMetrics
 
-ASV_PLOT_FILENAME = "asv_by_strategy.png"
+ASR_PLOT_FILENAME = "asr_by_strategy.png"
 CONFUSION_MATRIX_FILENAME = "confusion_matrix.png"
 LATENCY_PLOT_FILENAME = "latency_distribution.png"
 PLOT_DIR = "plots"
@@ -23,7 +23,7 @@ class Plotter:
     def generate_all(self, metrics: SecurityMetrics) -> None:
         """Generates all standard plots for a security run."""
         self._plot_confusion_matrix(metrics)
-        self._plot_strategy_asv(metrics)
+        self._plot_strategy_asr(metrics)
         self._plot_latency_distribution(metrics)
 
     def _plot_confusion_matrix(self, metrics: SecurityMetrics) -> None:
@@ -71,7 +71,7 @@ class Plotter:
         plt.savefig(self.plots_dir / CONFUSION_MATRIX_FILENAME)
         plt.close()
 
-    def _plot_strategy_asv(self, metrics: SecurityMetrics) -> None:
+    def _plot_strategy_asr(self, metrics: SecurityMetrics) -> None:
         """
         Horizontal bar chart of Attack Success Rate (Failure Rate) by Strategy.
         """
@@ -79,17 +79,17 @@ class Plotter:
             return
 
         strategies = list(metrics.by_strategy.keys())
-        asv_scores = [m.asv for m in metrics.by_strategy.values()]
+        asr_scores = [m.asr for m in metrics.by_strategy.values()]
 
-        # Sort by ASV (Most dangerous at top)
-        sorted_indices = np.argsort(asv_scores)
+        # Sort by ASR (Most dangerous at top)
+        sorted_indices = np.argsort(asr_scores)
         strategies = [strategies[i] for i in sorted_indices]
-        asv_scores = [asv_scores[i] for i in sorted_indices]
+        asr_scores = [asr_scores[i] for i in sorted_indices]
 
         fig, ax = plt.subplots(figsize=(8, len(strategies) * 0.5 + 2))
 
         y_pos = np.arange(len(strategies))
-        bars = ax.barh(y_pos, asv_scores, align="center", color="#d62728")
+        bars = ax.barh(y_pos, asr_scores, align="center", color="#d62728")
 
         ax.set_yticks(y_pos)
         ax.set_yticklabels(strategies)
@@ -101,7 +101,7 @@ class Plotter:
         ax.bar_label(bars, fmt="%.2f", padding=3)
 
         plt.tight_layout()
-        plt.savefig(self.plots_dir / ASV_PLOT_FILENAME)
+        plt.savefig(self.plots_dir / ASR_PLOT_FILENAME)
         plt.close()
 
     def _plot_latency_distribution(self, metrics: SecurityMetrics) -> None:

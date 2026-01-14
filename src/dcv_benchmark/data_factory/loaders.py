@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from dcv_benchmark.constants import CORPUS_DIR
 from dcv_benchmark.data_factory.base import BaseCorpusLoader
 from dcv_benchmark.models.data_factory import RawSample
 from dcv_benchmark.utils.logger import get_logger
@@ -16,8 +17,16 @@ class SquadLoader(BaseCorpusLoader):
 
     def load(self, file_path: str) -> list[RawSample]:
         path = Path(file_path)
+
         if not path.exists():
-            raise FileNotFoundError(f"Corpus file not found: {path}")
+            candidate = CORPUS_DIR / path.name
+            if candidate.exists():
+                logger.debug(f"Source file found in corpus dir: {candidate}")
+                path = candidate
+            else:
+                raise FileNotFoundError(
+                    f"Corpus file not found: {path} (checked {CORPUS_DIR})"
+                )
 
         logger.info(f"Loading corpus from {path}...")
 

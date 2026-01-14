@@ -5,11 +5,12 @@ from typing import Any
 
 import yaml
 
+from dcv_benchmark.constants import SCENARIOS_DIR
 from dcv_benchmark.data_factory.builder import DatasetBuilder
 from dcv_benchmark.data_factory.injector import AttackInjector
 from dcv_benchmark.data_factory.loaders import SquadLoader
 from dcv_benchmark.models.data_factory import DataFactoryConfig
-from dcv_benchmark.utils.logger import get_logger
+from dcv_benchmark.utils.logger import get_logger, print_dataset_header
 
 logger = get_logger(__name__)
 
@@ -25,26 +26,74 @@ def load_factory_config(path: Path) -> DataFactoryConfig:
         sys.exit(1)
 
 
+def resolve_data_target(target: str) -> Path:
+    """
+    Resolves the 'target' argument to a config file path.
+    1. Checks if 'target' is a scenario name (folder in SCENARIOS_DIR).
+       If so, looks for 'dataset_config.yaml' inside it.
+    2. Checks if 'target' is a direct file path.
+    """
+    # Try Scenario Name
+    scenario_dir = SCENARIOS_DIR / target
+    if scenario_dir.exists() and scenario_dir.is_dir():
+        # It's a valid scenario folder
+        config_candidate = scenario_dir / "dataset_config.yaml"
+        if config_candidate.exists():
+            return config_candidate
+
+        # If folder exists but config is missing, we check if it's a path below,
+        # but we'll likely want to error out if it's not a path.
+
+    # Try File Path
+    path = Path(target)
+    if path.exists():
+        return path
+
+    # Error Handling
+    if scenario_dir.exists() and scenario_dir.is_dir():
+        raise FileNotFoundError(
+            f"Scenario '{target}' found, but missing 'dataset_config.yaml' "
+            f"at {scenario_dir / 'dataset_config.yaml'}"
+        )
+
+    raise FileNotFoundError(
+        f"Target not found. Checked scenario '{scenario_dir}' and path '{path}'."
+    )
+
+
+def generate_dataset(config: DataFactoryConfig, output_path: Path) -> None:
+    """
+    Core logic to generate and save a dataset based on the provided config.
+    """
+    print_dataset_header(config.model_dump())
+
+    loader = SquadLoader()
+    injector = AttackInjector(config=config)
+
+    logger.debug(f"Initializing DatasetBuilder for '{config.dataset_name}'...")
+    builder = DatasetBuilder(loader=loader, injector=injector, config=config)
+
+    logger.info("Starting build process (Indexing -> Retrieving -> Injecting)...")
+    dataset = builder.build()
+
+    logger.info(f"Saving dataset to {output_path}...")
+    builder.save(dataset, output_path)
+    logger.info("Done.")
+
+
 def run_generate_dataset(args: argparse.Namespace) -> None:
     """Handler for the 'data generate' command."""
-    config_path = Path(args.config_path)
-    if not config_path.exists():
-        logger.error(f"Config file not found: {config_path}")
+    try:
+        config_path = resolve_data_target(args.target)
+        logger.debug(f"Resolved dataset config: {config_path}")
+    except FileNotFoundError as e:
+        logger.error(str(e))
         sys.exit(1)
 
-    logger.info(f"Loading Data Factory config from {config_path}...")
+    logger.debug(f"Loading Data Factory config from {config_path}...")
     config = load_factory_config(config_path)
 
     try:
-        loader = SquadLoader()
-        injector = AttackInjector(config=config)
-
-        logger.info(f"Initializing DatasetBuilder for '{config.dataset_name}'...")
-        builder = DatasetBuilder(loader=loader, injector=injector, config=config)
-
-        logger.info("Starting build process (Indexing -> Retrieving -> Injecting)...")
-        dataset = builder.build()
-
         # Determine output path
         if args.output:
             output_path = Path(args.output)
@@ -52,15 +101,13 @@ def run_generate_dataset(args: argparse.Namespace) -> None:
             # Default: dataset.json in the same folder as the config
             output_path = config_path.parent / "dataset.json"
 
-        # safety check
+        # Safety check
         if output_path.exists() and not args.force:
             logger.error(f"Output file already exists: {output_path}")
             logger.error("Use --force to overwrite it.")
             sys.exit(1)
 
-        logger.info(f"Saving dataset to {output_path}...")
-        builder.save(dataset, output_path)
-        logger.info("Done.")
+        generate_dataset(config, output_path)
 
     except Exception:
         logger.exception("Fatal error during dataset generation")
@@ -78,9 +125,9 @@ def register_data_cli(subparsers: Any) -> None:
         "generate", help="Generate a synthetic RAG dataset from a config file."
     )
     gen_parser.add_argument(
-        "config_path",
+        "target",
         type=str,
-        help="Path to the data_factory config (e.g. data/datasets/name/config.yaml)",
+        help="Scenario name (e.g. 'canary_naive') or path to config file.",
     )
     gen_parser.add_argument(
         "-o", "--output", type=str, help="Custom output path for the JSON file."

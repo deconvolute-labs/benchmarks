@@ -2,8 +2,10 @@ experiment:
   name: "canary_integrity_baseline_v1"
   description: "Baseline evaluation of Canary Token robustness against Prompt Extraction attacks in RAG contexts."
 
+  # Optional. By default points to 'scenarios/<name>/dataset.json' so here
+  # 'scenarios/example/dataset.json'
   input:
-    dataset_path: "data/datasets/v1_corporate_en.json"
+    dataset_path: "scenarios/example/dataset.json"
 
   target:
     pipeline: "basic_rag"   # Maps to src/dcv_benchmark/targets/basic_rag.py
@@ -39,11 +41,11 @@ experiment:
       temperature: 0 # For deterministic evaluation
 
     system_prompt:
-      path: "data/prompts/system_prompts.yaml"
+      file: "system_prompts.yaml"
       key: "standard"
 
     prompt_template:
-      path: "data/prompts/templates.yaml"
+      file: "templates.yaml"
       key: "rag_standard_v1"
 
   # Orchestrator

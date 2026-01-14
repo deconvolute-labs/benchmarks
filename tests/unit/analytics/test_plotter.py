@@ -16,7 +16,7 @@ def mock_metrics():
         global_metrics=GlobalSecurityMetrics(
             total_samples=100,
             pna_score=0.9,
-            asv_score=0.1,
+            asr_score=0.1,
             fpr_score=0.0,
             tp=10,
             fn=5,
@@ -28,10 +28,10 @@ def mock_metrics():
         ),
         by_strategy={
             "strat1": StrategySecurityMetric(
-                samples=10, asv=0.2, detected_count=8, missed_count=2
+                samples=10, asr=0.2, detected_count=8, missed_count=2
             ),
             "strat2": StrategySecurityMetric(
-                samples=5, asv=0.0, detected_count=5, missed_count=0
+                samples=5, asr=0.0, detected_count=5, missed_count=0
             ),
         },
     )
@@ -88,22 +88,22 @@ def test_plot_confusion_matrix(mock_plt, plotter, mock_metrics):
 
 
 @patch("dcv_benchmark.analytics.plotter.plt")
-def test_plot_strategy_asv(mock_plt, plotter, mock_metrics):
+def test_plot_strategy_asr(mock_plt, plotter, mock_metrics):
     mock_fig = MagicMock()
     mock_ax = MagicMock()
     mock_plt.subplots.return_value = (mock_fig, mock_ax)
 
-    plotter._plot_strategy_asv(mock_metrics)
+    plotter._plot_strategy_asr(mock_metrics)
 
     mock_ax.barh.assert_called_once()
     args, _ = mock_ax.barh.call_args
     # Check y_pos length
     assert len(args[0]) == 2
-    # Check values (asv scores)
+    # Check values (asr scores)
     assert len(args[1]) == 2
 
     mock_plt.savefig.assert_called_once()
-    assert "asv_by_strategy.png" in str(mock_plt.savefig.call_args[0][0])
+    assert "asr_by_strategy.png" in str(mock_plt.savefig.call_args[0][0])
 
 
 @patch("dcv_benchmark.analytics.plotter.plt")
@@ -122,12 +122,12 @@ def test_plot_latency_distribution(mock_plt, plotter, mock_metrics):
 
 
 @patch("dcv_benchmark.analytics.plotter.plt")
-def test_plot_strategy_asv_empty(mock_plt, plotter):
+def test_plot_strategy_asr_empty(mock_plt, plotter):
     empty_metrics = SecurityMetrics(
         global_metrics=GlobalSecurityMetrics(
             total_samples=0,
             pna_score=0,
-            asv_score=0,
+            asr_score=0,
             fpr_score=0.0,
             tp=0,
             fn=0,
@@ -141,7 +141,7 @@ def test_plot_strategy_asv_empty(mock_plt, plotter):
     )
 
     # Should simply return without plotting
-    plotter._plot_strategy_asv(empty_metrics)
+    plotter._plot_strategy_asr(empty_metrics)
 
     mock_plt.subplots.assert_not_called()
     mock_plt.savefig.assert_not_called()
@@ -153,7 +153,7 @@ def test_plot_latency_empty(mock_plt, plotter):
         global_metrics=GlobalSecurityMetrics(
             total_samples=0,
             pna_score=0,
-            asv_score=0,
+            asr_score=0,
             fpr_score=0.0,
             tp=0,
             fn=0,

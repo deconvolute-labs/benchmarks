@@ -4,7 +4,9 @@ from pydantic import BaseModel, Field
 
 
 class InputConfig(BaseModel):
-    dataset_path: str = Field(..., description="Path to the dataset JSON file")
+    dataset_path: str | None = Field(
+        default=None, description="Path to the dataset JSON file"
+    )
 
 
 class DefenseLayerConfig(BaseModel):
@@ -43,14 +45,14 @@ class LLMConfig(BaseModel):
 class SystemPromptConfig(BaseModel):
     """Developer-provided system prompt"""
 
-    path: str = Field(..., description="Path to prompts file.")
+    file: str = Field(..., description="Name of prompt file.")
     key: str = Field(..., description="Key within the prompts file.")
 
 
 class PromptTemplateConfig(BaseModel):
     """Template with placeholders for user and context."""
 
-    path: str = Field(..., description="Path to templates file.")
+    file: str = Field(..., description="Name of templates file.")
     key: str = Field(..., description="Key within the templates file.")
 
 
@@ -79,7 +81,9 @@ class ExperimentConfig(BaseModel):
     description: str = Field(default="", description="Description of the experiment.")
     version: str = Field(default="N/A", description="Version of the experiment.")
 
-    input: InputConfig = Field(..., description="Input data configuration.")
+    input: InputConfig = Field(
+        default_factory=InputConfig, description="Input data configuration."
+    )
     target: TargetConfig = Field(..., description="Target system configuration.")
     scenario: ScenarioConfig = Field(..., description="Scenario configuration.")
 

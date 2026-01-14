@@ -130,4 +130,4 @@ cython_debug/
 
 # App
 results/
-data/corpus/*.json
+resources/corpus/*.json

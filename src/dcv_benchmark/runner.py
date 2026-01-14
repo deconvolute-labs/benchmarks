@@ -15,11 +15,11 @@ from dcv_benchmark.targets.basic_rag import BasicRAG
 from dcv_benchmark.utils.dataset_loader import DatasetLoader
 from dcv_benchmark.utils.logger import get_logger, print_run_summary
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 class ExperimentRunner:
-    def __init__(self, output_dir: str = "results"):
+    def __init__(self, output_dir: str | Path = "results"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -49,6 +49,9 @@ class ExperimentRunner:
         # Initialize components
         # We assume the dataset path is relative to the project root
         logger.info("Initializing components...")
+
+        if not experiment_config.input.dataset_path:
+            raise ValueError("Cannot find path to dataset!")
         dataset: Dataset = DatasetLoader(experiment_config.input.dataset_path).load()
 
         logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")

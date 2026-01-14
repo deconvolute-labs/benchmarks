@@ -15,8 +15,8 @@ def valid_experiment_data():
             "input": {"dataset_path": "data.json"},
             "target": {
                 "pipeline": "toy_rag",
-                "system_prompt": {"path": "prompts.yaml", "key": "promptA"},
-                "prompt_template": {"path": "templates.yaml", "key": "templateA"},
+                "system_prompt": {"file": "prompts.yaml", "key": "promptA"},
+                "prompt_template": {"file": "templates.yaml", "key": "templateA"},
                 "defense": {"type": "deconvolute"},
                 "llm": {"provider": "openai", "model": "gpt-4"},
             },
