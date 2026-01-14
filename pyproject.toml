@@ -1,7 +1,7 @@
 [project]
 name = "deconvolute-benchmark"
 version = "0.1.0"
-description = "TODO"
+description = "Reproducible security benchmarking for the Deconvolute SDK and RAG integrity against adversarial attacks."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
