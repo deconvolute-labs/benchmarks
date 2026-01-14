@@ -1,5 +1,3 @@
-import logging
-
 from deconvolute import Canary, CanaryResult
 
 from dcv_benchmark.components.llms import BaseLLM, create_llm
@@ -7,9 +5,10 @@ from dcv_benchmark.components.vector_store import create_vector_store
 from dcv_benchmark.models.experiments_config import TargetConfig
 from dcv_benchmark.models.responses import TargetResponse
 from dcv_benchmark.targets.base import BaseTarget
+from dcv_benchmark.utils.logger import get_logger
 from dcv_benchmark.utils.prompt_loader import load_prompt_text
 
-logger = logging.getLogger()
+logger = get_logger(__name__)
 
 
 class BasicRAG(BaseTarget):
@@ -146,7 +145,6 @@ class BasicRAG(BaseTarget):
         # Generation
         if not self.llm:
             logger.error("Invoke called but no LLM is configured.")
-            # We return a response indicating failure in content, or raise error?
             # Returning error message in content is safer for the runner loop.
             return TargetResponse(
                 content="Error: No LLM Configured", used_context=context_chunks

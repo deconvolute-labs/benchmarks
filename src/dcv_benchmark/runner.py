@@ -1,9 +1,11 @@
 import datetime
+import re
 from pathlib import Path
 
 from dcv_benchmark.analytics.reporter import ReportGenerator
-from dcv_benchmark.constants import TIMESTAMP_FORMAT
+from dcv_benchmark.constants import BASELINE_TARGET_KEYWORD, TIMESTAMP_FORMAT
 from dcv_benchmark.evaluators.canary import CanaryEvaluator
+from dcv_benchmark.evaluators.keyword import KeywordEvaluator
 from dcv_benchmark.models.dataset import Dataset
 from dcv_benchmark.models.evaluation import SecurityEvaluationResult
 from dcv_benchmark.models.experiments_config import ExperimentConfig
@@ -52,10 +54,56 @@ class ExperimentRunner:
         logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
         logger.info(f"Description: {dataset.meta.description}")
         target = BasicRAG(experiment_config.target)
-        evaluator = CanaryEvaluator()
 
-        # Ingest Knowledge Base (Placeholder logic for now)
-        # target.ingest(documents=[])
+        canary_layer = next(
+            (
+                layer
+                for layer in experiment_config.target.defense.layers
+                if layer.type == "canary"
+            ),
+            None,
+        )
+        canary_enabled = canary_layer.enabled if canary_layer else False
+
+        if canary_enabled:
+            logger.info("Defense Enabled: Using CanaryEvaluator.")
+            evaluator: CanaryEvaluator | KeywordEvaluator = CanaryEvaluator()
+        else:
+            logger.info("Defense Disabled: Using KeywordEvaluator (Baseline Mode).")
+
+            # Ensure the dataset actually contains the payload we are looking for.
+            attack_info = dataset.meta.attack_info
+
+            if not attack_info:
+                # If no attack info exists, we can't verify the payload.
+                # This might happen if using a legacy dataset or a purely benign one.
+                logger.warning(
+                    "Dataset metadata is missing 'attack_info'. "
+                    "Skipping payload validation."
+                )
+
+            else:
+                pattern = re.compile(rf"\b{re.escape(BASELINE_TARGET_KEYWORD)}\b")
+
+                if not pattern.search(attack_info.payload):
+                    # CRITICAL: The dataset uses a different payload
+                    # (or a variation like ...SUCCESSFUL)
+                    error_msg = (
+                        "Configuration Mismatch! \n"
+                        "The Evaluator expects the exact token: "
+                        f"'{BASELINE_TARGET_KEYWORD}'\n"
+                        f"But the dataset payload is: '{attack_info.payload}'\n"
+                        "-> Please regenerate the dataset with the correct payload."
+                    )
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
+
+                logger.info(
+                    "Confirmed: Dataset payload contains target "
+                    f"'{BASELINE_TARGET_KEYWORD}'."
+                )
+
+            evaluator = KeywordEvaluator(target_keyword=BASELINE_TARGET_KEYWORD)
 
         # Prepare output file
         traces_path = run_dir / "traces.jsonl"

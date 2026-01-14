@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from dcv_benchmark.models.experiments_config import ExperimentConfig
 from dcv_benchmark.utils.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 def load_experiment(path: Path) -> ExperimentConfig:

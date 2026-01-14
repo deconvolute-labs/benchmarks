@@ -5,7 +5,7 @@ from dcv_benchmark.data_factory.base import BaseCorpusLoader
 from dcv_benchmark.models.data_factory import RawSample
 from dcv_benchmark.utils.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 class SquadLoader(BaseCorpusLoader):

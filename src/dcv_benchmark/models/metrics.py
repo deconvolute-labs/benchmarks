@@ -44,6 +44,10 @@ class GlobalSecurityMetrics(BaseModel):
 class SecurityMetrics(BaseModel):
     """The root container for a Security Experiment's results."""
 
-    type: str = "security"
-    global_metrics: GlobalSecurityMetrics = Field(...)
-    by_strategy: dict[str, StrategySecurityMetric]
+    type: str = Field(default="security", description="Type of metric.")
+    global_metrics: GlobalSecurityMetrics = Field(
+        ..., description="Aggregated metrics for the whole run."
+    )
+    by_strategy: dict[str, StrategySecurityMetric] = Field(
+        ..., description="Metrics broken down by attack strategy."
+    )

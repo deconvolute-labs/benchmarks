@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
@@ -8,8 +7,9 @@ from dcv_benchmark.analytics.plotter import Plotter
 from dcv_benchmark.models.experiments_config import ExperimentConfig
 from dcv_benchmark.models.metrics import SecurityMetrics
 from dcv_benchmark.models.report import ExperimentReport, ReportMeta
+from dcv_benchmark.utils.logger import get_logger
 
-logger = logging.getLogger()
+logger = get_logger(__name__)
 
 
 RESULTS_ARTIFACT_FILENAME = "results.json"

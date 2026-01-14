@@ -17,6 +17,8 @@ def mock_config():
         attack_rate=0.5,
         attack_payload="PAYLOAD",
         retrieval_k=3,
+        truncate_overflow=False,
+        flooding_repetitions=5,
     )
 
 
@@ -61,16 +63,24 @@ def test_build_workflow(mock_config, mock_loader, mock_injector, mock_retriever_
     builder = DatasetBuilder(mock_loader, mock_injector, mock_config)
     dataset = builder.build()
 
-    # 1. Verify Loader Interaction
+    # Verify Loader Interaction
     mock_loader.load.assert_called_once_with("dummy.json")
 
-    # 2. Verify Indexing
+    # Verify Metadata Population
+    assert dataset.meta.attack_info is not None
+    assert dataset.meta.attack_info.strategy == "naive"
+    assert dataset.meta.attack_info.payload == "PAYLOAD"
+    # Verify the rate reflects the config passed to builder (1.0 override)
+    assert dataset.meta.attack_info.rate == 1.0
+    assert dataset.meta.attack_info.configuration["truncate"] is False
+
+    # Verify Indexing
     # Should index ["Gold1", "Gold2"]
     mock_retriever_instance.index.assert_called_once()
     indexed_docs = mock_retriever_instance.index.call_args[1]["documents"]
     assert set(indexed_docs) == {"Gold1", "Gold2"}
 
-    # 3. Verify Result Structure
+    # Verify Result Structure
     assert isinstance(dataset, Dataset)
     assert len(dataset.samples) == 2
 
@@ -79,7 +89,7 @@ def test_build_workflow(mock_config, mock_loader, mock_injector, mock_retriever_
     assert sample.query == "Q1"
     assert sample.sample_type == "attack"
 
-    # 4. Verify Injection
+    # Verify Injection
     # Since rate is 1.0, one chunk should be poisoned
     mock_injector.inject.assert_called()
     assert any(c.is_malicious for c in sample.context)

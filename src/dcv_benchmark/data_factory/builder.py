@@ -6,6 +6,7 @@ from dcv_benchmark.data_factory.base import BaseCorpusLoader, BaseInjector
 from dcv_benchmark.data_factory.retrieval import EphemeralRetriever
 from dcv_benchmark.models.data_factory import DataFactoryConfig
 from dcv_benchmark.models.dataset import (
+    AttackInfo,
     BenchmarkSample,
     ContextChunk,
     CorpusInfo,
@@ -155,6 +156,15 @@ class DatasetBuilder:
                         "retrieval_k": self.config.retrieval_k,
                         "embedding_provider": self.config.embedding_provider,
                         "embedding_model": self.config.embedding_model,
+                    },
+                ),
+                attack_info=AttackInfo(
+                    strategy=self.config.attack_strategy,
+                    rate=self.config.attack_rate,
+                    payload=self.config.attack_payload,
+                    configuration={
+                        "truncate": self.config.truncate_overflow,
+                        "reps": self.config.flooding_repetitions,
                     },
                 ),
             ),

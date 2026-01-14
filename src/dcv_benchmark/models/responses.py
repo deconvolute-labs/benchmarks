@@ -14,19 +14,22 @@ class TargetResponse(BaseModel):
     """
 
     # The final output the user sees (potentially sanitized)
+    # The final output the user sees (potentially sanitized)
     # Optional because a Retriever-only run produces no generated text
-    content: str | None = None
+    content: str | None = Field(default=None, description="Final user-facing content.")
 
     # The direct output from the Generator/LLM before defense/sanitization
     # Essential for analyzing if the model was hijacked even if the output was blocked
-    raw_content: str | None = None
+    raw_content: str | None = Field(
+        default=None, description="Raw LLM output before sanitization."
+    )
 
     # Context
     used_context: list[str] = Field(default_factory=list)
 
     # Defense signals
     attack_detected: bool = Field(
-        default=False, description="True if an integrity check failed"
+        default=False, description="True if an integrity check by the SDK failed"
     )
     detection_reason: str | None = Field(
         default=None, description="Reason for detection (e.g. 'canary_missing')."

@@ -1,4 +1,3 @@
-import logging
 import uuid
 from abc import ABC, abstractmethod
 from typing import Any, cast
@@ -8,8 +7,9 @@ import openai  # This is okay for now
 from chromadb.config import Settings
 
 from dcv_benchmark.models.experiments_config import EmbeddingConfig, RetrieverConfig
+from dcv_benchmark.utils.logger import get_logger
 
-logger = logging.getLogger()
+logger = get_logger(__name__)
 
 
 class BaseVectorStore(ABC):
