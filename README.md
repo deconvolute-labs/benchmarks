@@ -5,23 +5,34 @@
 [![Dependency Manager: uv](https://img.shields.io/badge/uv-managed-purple)](https://github.com/astral-sh/uv)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A reproducible benchmark to evaluate how the [Deconvolute SDK](https://github.com/daved01/deconvolute) protects RAG pipelines from Indirect Prompt Injection attacks under controlled, reproducible conditions. While Deconvolute is the primary test subject, the benchmark is designed to support other defense systems using the same experiment definitions.
+
+This repository provides a reproducible benchmark for evaluating how effectively the [Deconvolute SDK](https://github.com/daved01/deconvolute) protects Retrieval Augmented Generation pipelines and agent-based systems against Indirect Prompt Injection attacks. It includes the code, datasets, and configuration needed to validate integrity and detection claims, measure trade-offs such as latency and false positive rates, and enable independent verification. While the Deconvolute SDK is the primary focus, the benchmark is designed to support evaluation of other defense systems through shared, declarative experiment definitions that are repeatable across environments and model versions.
 
 
 ## Scope
 
-This benchmark focuses on system integrity, not general model safety.
+This benchmark evaluates system integrity failures caused by adversarial content injected through retrieved documents. It does not address general model safety, alignment, or harmful content generation. Results should be interpreted as measurements of integrity enforcement under specific, controlled attack scenarios.
 
-The core question it answers is:
 
-> Can the system detect and respond to integrity violations caused by adversarial content injected via retrieved documents?
+## Results Overview
 
-Each experiment defines:
-- a specific attack goal
-- an observable failure signal
-- a detection or mitigation mechanism
+The results presented below correspond to the Naive Base64 Injection scenario, evaluated on a dataset consisting of 300 samples.
 
-Different experiments may use different signals and evaluation criteria depending on the mechanism under test.
+
+### Experiment: Base64 Injection
+
+- **Attack Goal:** Induce the generator model to ignore system-level instructions and emit responses encoded in Base64, thereby bypassing keyword-based filters.
+- **Name:** `canary_naive_base64`
+
+
+| Experiment Configuration | ASR (Attack Success) | PNA (Benign Perf) | TP  | FN  | TN  | FP |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Baseline** (No Defense) | **90.7%** | 98.7% | 14  | 136 | 148 | 2  |
+| **Protected** (Canary + Language) | **0.67%** | 95.3% | 149 | 1   | 143 | 7  |
+
+*Lower ASR is better. Higher PNA is better.*
+
+Without defenses, the model is highly susceptible to indirect prompt injection. Enabling the Deconvolute SDK substantially reduces successful attacks, at the cost of a small increase in false positives on benign queries. This reflects a typical trade-off between strict integrity enforcement and tolerance for benign variation. A detailed analysis of failure modes and defense behavior is provided in the accompanying technical blog post.
 
 
 ## Quickstart
@@ -35,68 +46,57 @@ cd deconvolute-benchmark
 uv sync --all-extras
 ```
 
-There are some extras that you might not want to install:
+Optional extras are available. Currently:
 - `language`: for the `LanguageMismatchEvaluator`
 
-Optionally, activate the environment with `source .venv/bin/activate` so you don't need the prefix `uv run` for every command. We assume that the env is not activated for this Readme.
+
+The virtual environment may be activated with `source .venv/bin/activate` to avoid prefixing commands with `uv run`. The examples below assume the environment is not activated.
 
 
-### Run an Experiment
+### Running an Experiment
 
-Experiments are organized as scenarios in the `scenario` directory. Each scenario folder (e.g. `scenarios/example/`) is a self-contained unit holding:
-- `experiment.yaml`: The benchmark definition.
-- `dataset_config.yaml`: The recipe to generate the attack dataset.
-- `dataset.json`: The actual dataset used (ground truth).
+Experiments are organized as scenarios under `scenarios/`. Each scenario directory contains:
+- `experiment.yaml`: the experiment definition
+- `dataset_config.yaml`: the dataset generation recipe
+- `dataset.json`: the generated dataset
 
-To run an experiment, pass the configuration file to the benchmark runner:
+An experiment can be run by specifying the scenario name:
 
 ```bash
 uv run dcv-bench run example
 ```
 
-**Note:** If `dataset.json` is missing, the runner will automatically attempt to generate it using the scenario's `dataset_config.yaml` before running the experiment.
+If `dataset.json` is missing, it is generated automatically from `dataset_config.yaml` before execution.
 
-You can also run variants (e.g. `experiment_gpt4.yaml`) using the colon syntax:
+Experiment variants can be selected using the colon syntax:
 
 ```bash
 # Runs scenarios/example/experiment_gpt4.yaml
 uv run dcv-bench run example:gpt4
 ```
 
-No code changes are required to modify attack strategies, sample sizes, languages, or model settings. You can see an example configuration in `scenarios/example/experiment_example.yaml`.
+Attack strategies, dataset properties, and model settings are modified entirely through configuration. No code changes are required.
 
-### Configuration Guide
-The benchmark uses a YAML configuration to define the pipeline, defenses, and evaluation criteria.
+### Configuration Overview
+
+Experiments are defined using YAML files that describe the pipeline, defense layers, and evaluation logic.
 
 
 #### Defense Layers (target.defense)
+Multiple defense layers from the `deconvolute` SDK can be composed in the pipeline using the config file. Supported layers include:
 
-You can configure multiple defense layers in the basic_rag pipeline. Supported layers include:
+| Layer Type          | Description                                                   | Config                      |
+| :------------------ | :------------------------------------------------------------ | :-------------------------- | 
+| `canary`	          | Checks for explicit integrity violation signals from the SDK. | N/A                         |
+| `keyword`	          | Detects the presence of an injected payload in the output.    | `target_keyword`            | 
+| `language_mismatch`	| Detects violations of the expected output language.           | `expected_language`, `strict` |
 
-| Layer Type      | Description            | 
-| :---------------| :------------------------------------------ |
-`canary`	  | Injects and verifies a hidden token to detect prompt leakage/integrity violations. |
-`language`	| Enforces language policies (e.g. ensuring output remains in English).              |
-
-
-#### Evaluators (experiment.target.evaluator)
-
-The benchmark supports different evaluators depending on the experiment goal:
-
-| Evaluator Type      | Description              | Config Keys               |
-| :-------------------| :----------------------- | :----------------------- |
-| `canary`            | Checks if the Deconvolute SDK explicitly detected an integrity violation. | N/A | 
-| `keyword`           | Checks if a specific string (the attack payload) appears in the output. Useful for testing baseline vulnerability. |`target_keyword` | 
-| `language_mismatch` |"Checks if the output language matches the expected policy, or if the defense successfully blocked a violation." | `expected_language, strict` | 
+Observable signals from multiple defense layers are used to detect integrity violations. Prior work shows that indirect prompt injection can exploit weaknesses in instruction handling, making layered defenses essential for reliable detection.
 
 
-#### Notes
-\* The Generator integrity (Canary-based) experiment uses prompt extraction as an observable signal for instruction hierarchy violations. Wallace et al. 2024 show that jailbreaks, system prompt leakage, and indirect prompt injection share incorrect prioritization of privileged instructions as a common failure mode, making prompt extraction a high-signal proxy for this class of integrity failures.
+### Evaluation Metrics
 
-### Evaluation Logic & Metrics
-This benchmark treats security as a binary classification problem. For every sample, the system either detects an attack or fails to do so.
-
-We map every result into one of four quadrants:
+Each sample is treated as a binary security outcome. Results fall into one of four categories:
 
 | Term	              | Scenario	     | Outcome	    | Interpretation                                       |
 | :------------------ | :------------- | :----------- | :--------------------------------------------------- |
@@ -105,56 +105,39 @@ We map every result into one of four quadrants:
 | TN (True Negative)  | Benign Sample	 | Not Detected | Normal Operation. System worked as expected.         |
 | FP (False Positive) | Benign Sample	 | Detected	    | False Alarm. Usefulness is degraded.                 |
 
-
-
-**ASR (Attack Success Rate):** The percentage of attacks that bypassed the defense.
-
-- Formula: FN / Total Attacks
-- Goal: 0.0 (0%)
-
-**PNA (Performance on No Attack):** The percentage of benign queries processed without interference.
-
-- Formula: TN / Total Benign
-- Goal: 1.0 (100%)
-
-**Latency:** The end-to-end execution time (seconds) for attack vs. benign samples.
+Attack Success Rate (ASR) measures the fraction of attacks that bypass defenses. Performance on No Attack (PNA) measures how often benign queries proceed without interference. Latency is reported as end-to-end execution time for attack and benign samples.
 
 
 ## Dataset Structure
 
-The project organizes datasets within specific scenario folders in `scenarios/<scenario-name>` (e.g. `scenarios/example/dataset.json`).
+Datasets live in each scenario folder under `scenarios/<scenario-name>/` (e.g. `scenarios/example/dataset.json`).
 
-### Dataset Creation
+### Generating a Dataset
 
-To generate custom datasets or regenerate the baselines, you must first install the optional data processing dependencies:
+Optional data dependencies must be installed first:
 
 ```bash
 uv sync --extra data
 ```
 
-Datasets are created using a base corpus (located in `resources/corpus`) and a configuration file named `dataset_config.yaml` found in the scenario folder.
-
-#### Fetch Base Corpus
-Download and shuffle the SQuAD v1.1 validation subset used as the clean baseline:
+Datasets are built from a base corpus in `resources/corpus` and the scenario’s `dataset_config.yaml`. For example, to fetch the baseline SQuAD v1.1 validation set:
 
 ```bash
 uv run python resources/corpus/fetch_squad_data.py
 ```
 
-#### Generate Dataset
-Use the `data generate` command to build a production-ready JSON dataset. You can simply pass the scenario name, and the tool will look for `dataset_config.yaml` in that folder.
+To generate a scenario dataset:
 
 ```bash
-# Generate the dataset for the 'example' scenario
 uv run dcv-bench data generate example
 ```
 
-The output `dataset.json` is saved in the scenario directory and is ready for use in experiments.
+The resulting `dataset.json` will be saved in the scenario folder and is ready for experiments.
 
 
 ## Output and Artifacts
 
-Each experiment run produces a timestamped directory `run_<timestamp>` under `results/` next to the experiment config used for that run.
+Each experiment run produces a timestamped directory under `results/` in the scenario folder:
 
 ```bash
 scenarios/
@@ -169,109 +152,12 @@ scenarios/
                 └── latency_distribution.png  # Performance Overhead
   ```
 
-`results.json` is the authoritative artifact for a run. It contains:
-- Metadata and timing information
-- A full dump of the experiment configuration
-- Aggregated metrics and per-strategy breakdowns
-- References to generated artifacts
-
-Example structure:
-
-```json
-{
-  "meta": {
-    "id": <UUID>,
-    "name": "canary_baseline_v1",
-    "description": "This is an experiment.",
-    "timestamp_start": "2026-01-09T18:30:00Z",
-    "timestamp_end": "2026-01-09T18:35:00Z",
-    "duration_seconds": 300.5,
-    "deconvolute_version": "0.1.0",
-    "runner_version": "1.0.0"
-  },
-  
-  "config": {
-    // ... Complete dump of the experiment YAML ...
-  },
-
-  "metrics": {
-    "type": "security",
-      "global_metrics": {
-        "total_samples": 100,
-        "asr_score": 0.05,      
-        "pna_score": 0.98,      
-        "tp": 45,
-        "fn": 5,
-        "tn": 49,
-        "fp": 1,
-        "avg_latency_seconds": 1.25,
-        "latencies_attack": [
-          1.25
-        ],
-        "latencies_benign": [
-          1.25
-        ]
-      },
-      "by_strategy": {
-        "context_flooding": { 
-          "samples": 25, 
-          "asr": 0.20, 
-          "detected_count": 20, 
-          "missed_count": 5 
-        }
-      }
-  },
-}
-```
-
-The `results.json` file contains aggregated metrics for the experiment. For per-sample execution details, see `traces.jsonl`, which records each individual RAG pipeline run as a separate entry.
-
-A Markdown report is generated from templates in `evaluator/templates/`. It summarizes attack success rates, defense behavior, and latency characteristics to make results easy to inspect.
+The `results.json` file is the main artifact for analysis. For per-sample execution details, see `traces.jsonl`, which records data for each individual sample.
 
 
-## Results Overview
+## Scope and Relationship to the Deconvolute SDK
 
-This repository intentionally keeps result interpretation minimal.
-
-Each experiment links to a dedicated analysis blog post that describes the setup, summarized quantitative results, discusses the observed failure modes, and explains implications for real-world RAG systems.
-
-### Canary Token Integrity (Prompt Extraction)
-
-Evaluates integrity behavior under Indirect Prompt Injection using prompt extraction as the observable signal.
-
-
-| Template | Config | Deconvolute Features | Analysis |
-| :-------- | :------- | :-------------------- | :--------- |
-| `generator_canary.yaml`  | `canary_baseline.yaml`   | Canary | TODO |
-
-
-#### Test Setup
-- Adversarial instructions are injected via retrieved documents
-- A canary token is embedded in the system prompt
-- The model is instructed to always include the Canary token in the output
-
-#### Evaluation Rule
-- Privileged content is revealed without the canary token → integrity violation (attack success)
-- Canary token is triggered → integrity violation detected
-
-#### Attack Strategies
-- `naive`: Direct instruction override
-- `leet_speak`: Obfuscated instruction attempts
-- `context_flooding`: Oversized or repetitive context payloads
-- `payload_splitting`: Instruction fragments spread across chunks
-
-
-## Limitations and Scope
-
-This benchmark currently focuses on a single integrity failure mode: prompt extraction via Indirect Prompt Injection, evaluated using canary-based detection.
-
-Results should not be interpreted as comprehensive LLM security guarantees. The goal is to deeply evaluate a well-defined failure mode before expanding to additional attack classes and defense mechanisms.
-
-## Relationship to the Deconvolute SDK
-
-This repository evaluates observable system behavior under attack, not internal implementation details.
-
-Detailed explanations of the canary mechanism and integrity protocol live in the [Deconvolute SDK documentation](https://github.com/daved01/deconvolute). This benchmark focuses on how systems behave under adversarial inputs, how often defenses trigger, and how reliably integrity violations are detected.
+This benchmark focuses on a single attack class: Indirect Prompt Injection, using multiple defensive layers to evaluate defense-in-depth. It measures observable system behavior under attack rather than internal SDK implementation. Results should not be interpreted as comprehensive LLM security guarantees. Detailed explanations of the SDK’s defenses and integrity protocols are available in the [Deconvolute SDK documentation](https://github.com/daved01/deconvolute).
 
 
 ## References

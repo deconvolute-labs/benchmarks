@@ -1,6 +1,6 @@
 experiment:
-  name: "base64_naive"
-  description: "Base64 output attack using naive prompt injection."
+  name: "base64_naive_canary_language"
+  description: "Base64 output attack using naive prompt injection and the canary and language defense layers."
   version: "0.1"
 
   target:
@@ -38,4 +38,4 @@ experiment:
     strict: true
 
   scenario:
-    id: "base_64_naive_baseline"
+    id: "base_64_naive_canary_language"
