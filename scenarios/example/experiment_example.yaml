@@ -1,30 +1,36 @@
 experiment:
-  name: "canary_integrity_baseline_v1"
-  description: "Baseline evaluation of Canary Token robustness against Prompt Extraction attacks in RAG contexts."
+  name: "example_experiment"
+  description: "An example of a full config file."
 
   # Optional. By default points to 'scenarios/<name>/dataset.json' so here
   # 'scenarios/example/dataset.json'
   input:
     dataset_path: "scenarios/example/dataset.json"
 
+  # System Under Test
   target:
-    pipeline: "basic_rag"   # Maps to src/dcv_benchmark/targets/basic_rag.py
+    name: "basic_rag"   # Maps to src/dcv_benchmark/targets/basic_rag.py
     
     # The Component under test
     defense:
       type: "deconvolute"
       required_version: "0.1.0" # Optionally require version
       layers:
+        # Layer 1: Input Filtering (Placeholder for future implementation)
         - type: "input_filter"
           enabled: false
 
+        # Layer 2: Canary Defense (Integrity Check)
         - type: "canary"
           enabled: true
           settings: 
             token_length: 16
 
-        - type: "output_sanitizer"
-          enabled: false
+        # Layer 3: Language Enforcement
+        - type: "language"
+          enabled: true
+          settings:
+            allowed_languages: ["en"]
 
     embedding:
       provider: "openai" # or "mock"
@@ -48,6 +54,26 @@ experiment:
       file: "templates.yaml"
       key: "rag_standard_v1"
 
-  # Orchestrator
+  # Evaluator Selection (Uncomment ONLY ONE block below)
+
+  # Option 1: Language Mismatch (Policy)
+  # Checks if the output adheres to the expected language (e.g. for preventing jailbreaks into other languages).
+  evaluator:
+    type: "language_mismatch"
+    expected_language: "en"
+    strict: true
+
+  # Option 2: Canary (Integrity)
+  # Checks if the Deconvolute SDK successfully detected the integrity violation.
+  # evaluator:
+  #   type: "canary"
+
+  # Option 3: Keyword (Attack Success)
+  # Checks for the presence of a specific string in the output (e.g., to verify if a payload executed).
+  # evaluator:
+  #   type: "keyword"
+  #   target_keyword: "PWNED"
+
+  # For tagging
   scenario:
-    id: "prompt_leakage"  # Maps to src/dcv_benchmark/scenarios/leakage.py
+    id: "prompt_leakage"

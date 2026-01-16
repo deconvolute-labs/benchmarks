@@ -1,4 +1,9 @@
-from deconvolute import Canary, CanaryResult
+from deconvolute.detectors import (
+    CanaryDetector,
+    CanaryResult,
+    LanguageDetector,
+    LanguageResult,
+)
 
 from dcv_benchmark.components.llms import BaseLLM, create_llm
 from dcv_benchmark.components.vector_store import create_vector_store
@@ -46,13 +51,25 @@ class BasicRAG(BaseTarget):
             logger.debug("No Retriever configured. Running in Generator-only mode.")
 
         # Setup Deconvolute defense
-        self.canary = Canary()
+        self.canary = CanaryDetector()
         self.canary_enabled = False  # For tracking
 
+        # We allow for a flexible language detector slot
+        self.language_detector: LanguageDetector | None = None
+
         for layer in config.defense.layers:
-            if layer.type == "canary" and layer.enabled:
-                self.canary_enabled = True
-                logger.info("Deconvolute Canary defense ENABLED.")
+            if layer.enabled:
+                if layer.type == "canary":
+                    self.canary_enabled = True
+                    logger.info("Deconvolute Canary defense ENABLED.")
+
+                elif layer.type == "language":
+                    # Initialize with settings from YAML (e.g. allowed_languages=['en'])
+                    self.language_detector = LanguageDetector(**layer.settings)
+                    logger.info(
+                        "Deconvolute Language defense ENABLED. "
+                        f"Config: {layer.settings}"
+                    )
 
         # Load system prompt
         self.system_prompt: str = load_prompt_text(
@@ -163,18 +180,6 @@ class BasicRAG(BaseTarget):
         detection_reason = None
         final_content = raw_response
 
-        if self.canary_enabled and canary_token:
-            result: CanaryResult = self.canary.check(raw_response, canary_token)
-
-            # Map SDK result directly to response model
-            if result.threat_detected:
-                attack_detected = True
-                detection_reason = "Canary Integrity Check Failed"
-                final_content = "Response blocked by Deconvolute."
-            else:
-                # If safe, we clean the token from the final output
-                final_content = self.canary.clean(raw_response, canary_token)
-
         # Metadata preparation
         response_metadata = {
             "model": self.config.llm.model if self.config.llm else "none",
@@ -182,6 +187,41 @@ class BasicRAG(BaseTarget):
 
         if canary_token:
             response_metadata["canary_token"] = canary_token
+
+        # Layer A: Canary Check
+        if self.canary_enabled and canary_token:
+            result: CanaryResult = self.canary.check(raw_response, token=canary_token)
+
+            if result.threat_detected:
+                attack_detected = True
+                detection_reason = "Canary Integrity Check Failed"
+                final_content = "Response blocked by Deconvolute."
+            else:
+                # If safe, clean the token before passing to next layer
+                final_content = self.canary.clean(raw_response, canary_token)
+
+        # Layer B: Language Check (Daisy Chained)
+        # We only run this if the previous layer didn't block it
+        if not attack_detected and self.language_detector:
+            # We pass reference_text to enable Mode B if the detector supports it
+            lang_result: LanguageResult = self.language_detector.check(
+                content=final_content, reference_text=user_query
+            )
+
+            # Store result in metadata for debugging/analysis
+            # Using dict() or model_dump() depending on Pydantic version in SDK
+            response_metadata["language_check"] = (
+                lang_result.model_dump()
+                if hasattr(lang_result, "model_dump")
+                else lang_result.__dict__
+            )
+
+            if lang_result.threat_detected:
+                attack_detected = True
+                detection_reason = (
+                    f"Language Policy Violation: {lang_result.detected_language}"
+                )
+                final_content = "Response blocked by Deconvolute."
 
         return TargetResponse(
             content=final_content,

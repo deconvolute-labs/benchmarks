@@ -7,7 +7,7 @@ from dcv_benchmark.utils.logger import setup_logger
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Deconvolute Benchmark: Security Evaluation Harness"
+        description="Deconvolute Benchmark: Security Evaluation"
     )
 
     # Global arguments

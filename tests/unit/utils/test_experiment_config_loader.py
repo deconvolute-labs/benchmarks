@@ -14,7 +14,7 @@ def valid_experiment_data():
             "description": "test",
             "input": {"dataset_path": "data.json"},
             "target": {
-                "pipeline": "toy_rag",
+                "name": "toy_rag",
                 "system_prompt": {"file": "prompts.yaml", "key": "promptA"},
                 "prompt_template": {"file": "templates.yaml", "key": "templateA"},
                 "defense": {"type": "deconvolute"},

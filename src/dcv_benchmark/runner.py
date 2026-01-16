@@ -3,9 +3,15 @@ import re
 from pathlib import Path
 
 from dcv_benchmark.analytics.reporter import ReportGenerator
-from dcv_benchmark.constants import BASELINE_TARGET_KEYWORD, TIMESTAMP_FORMAT
+from dcv_benchmark.constants import (
+    AVAILABLE_EVALUATORS,
+    BASELINE_TARGET_KEYWORD,
+    TIMESTAMP_FORMAT,
+)
+from dcv_benchmark.evaluators.base import BaseEvaluator
 from dcv_benchmark.evaluators.canary import CanaryEvaluator
 from dcv_benchmark.evaluators.keyword import KeywordEvaluator
+from dcv_benchmark.evaluators.language import LanguageMismatchEvaluator
 from dcv_benchmark.models.dataset import Dataset
 from dcv_benchmark.models.evaluation import SecurityEvaluationResult
 from dcv_benchmark.models.experiments_config import ExperimentConfig
@@ -22,6 +28,29 @@ class ExperimentRunner:
     def __init__(self, output_dir: str | Path = "results"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def _validate_baseline_payload(self, dataset: Dataset) -> None:
+        """Helper to validate dataset payload for Keyword evaluation."""
+        attack_info = dataset.meta.attack_info
+        if not attack_info:
+            logger.warning(
+                "Dataset metadata is missing 'attack_info'. Skipping validation."
+            )
+            return
+
+        pattern = re.compile(rf"\b{re.escape(BASELINE_TARGET_KEYWORD)}\b")
+        if not pattern.search(attack_info.payload):
+            error_msg = (
+                "Configuration Mismatch! \n"
+                f"Evaluator expects: '{BASELINE_TARGET_KEYWORD}'\n"
+                f"Dataset payload: '{attack_info.payload}'"
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        logger.info(
+            f"Confirmed: Dataset payload contains target '{BASELINE_TARGET_KEYWORD}'."
+        )
 
     def run(
         self, experiment_config: ExperimentConfig, limit: int | None = None
@@ -58,55 +87,49 @@ class ExperimentRunner:
         logger.info(f"Description: {dataset.meta.description}")
         target = BasicRAG(experiment_config.target)
 
-        canary_layer = next(
-            (
-                layer
-                for layer in experiment_config.target.defense.layers
-                if layer.type == "canary"
-            ),
-            None,
-        )
-        canary_enabled = canary_layer.enabled if canary_layer else False
+        # Evaluator Setup
+        eval_config = experiment_config.evaluator
 
-        if canary_enabled:
-            logger.info("Defense Enabled: Using CanaryEvaluator.")
-            evaluator: CanaryEvaluator | KeywordEvaluator = CanaryEvaluator()
+        if eval_config is None:
+            error_msg = (
+                "Missing Configuration: No evaluator specified.\nYou must explicitly"
+                " define an 'evaluator' section in your experiment YAML.\n"
+                f"Available types: {', '.join(AVAILABLE_EVALUATORS)}"
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        # Initialize Evaluator
+        evaluator: BaseEvaluator
+
+        if eval_config.type == "canary":
+            logger.info("Evaluator: Canary Defense Integrity")
+            evaluator = CanaryEvaluator()
+
+        elif eval_config.type == "keyword":
+            # For Keyword evaluator, we still validate the dataset payload
+            self._validate_baseline_payload(dataset)
+
+            kw = eval_config.target_keyword or BASELINE_TARGET_KEYWORD
+            logger.info(f"Evaluator: Keyword (Target: '{kw}')")
+            evaluator = KeywordEvaluator(target_keyword=kw)
+
+        elif eval_config.type == "language_mismatch":
+            logger.info(
+                "Evaluator: Language Mismatch "
+                f"(Expected: {eval_config.expected_language})"
+            )
+            try:
+                evaluator = LanguageMismatchEvaluator(
+                    expected_language=eval_config.expected_language,
+                    strict=eval_config.strict,
+                )
+            except ImportError as e:
+                logger.error("Missing dependencies for Language Evaluator.")
+                raise e
         else:
-            logger.info("Defense Disabled: Using KeywordEvaluator (Baseline Mode).")
-
-            # Ensure the dataset actually contains the payload we are looking for.
-            attack_info = dataset.meta.attack_info
-
-            if not attack_info:
-                # If no attack info exists, we can't verify the payload.
-                # This might happen if using a legacy dataset or a purely benign one.
-                logger.warning(
-                    "Dataset metadata is missing 'attack_info'. "
-                    "Skipping payload validation."
-                )
-
-            else:
-                pattern = re.compile(rf"\b{re.escape(BASELINE_TARGET_KEYWORD)}\b")
-
-                if not pattern.search(attack_info.payload):
-                    # CRITICAL: The dataset uses a different payload
-                    # (or a variation like ...SUCCESSFUL)
-                    error_msg = (
-                        "Configuration Mismatch! \n"
-                        "The Evaluator expects the exact token: "
-                        f"'{BASELINE_TARGET_KEYWORD}'\n"
-                        f"But the dataset payload is: '{attack_info.payload}'\n"
-                        "-> Please regenerate the dataset with the correct payload."
-                    )
-                    logger.error(error_msg)
-                    raise ValueError(error_msg)
-
-                logger.info(
-                    "Confirmed: Dataset payload contains target "
-                    f"'{BASELINE_TARGET_KEYWORD}'."
-                )
-
-            evaluator = KeywordEvaluator(target_keyword=BASELINE_TARGET_KEYWORD)
+            # Should be caught by Pydantic, but good for safety
+            raise ValueError(f"Unknown evaluator type: {eval_config.type}")
 
         # Prepare output file
         traces_path = run_dir / "traces.jsonl"

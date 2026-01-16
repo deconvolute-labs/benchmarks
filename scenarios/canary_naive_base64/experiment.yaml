@@ -1,19 +1,23 @@
 experiment:
-  name: "canary_naive"
-  description: "Evaluation using naive prompt injection."
+  name: "base64_naive"
+  description: "Base64 output attack using naive prompt injection."
   version: "0.1"
 
   target:
-    pipeline: "basic_rag"
-    
+    name: "basic_rag"
+
     defense:
       type: "deconvolute"
-      required_version: "0.1.0a4"
+      required_version: "0.1.0a5"
       layers:
         - type: "canary"
           enabled: true
           settings: 
             token_length: 16
+        - type: "language"
+          enabled: true
+          settings:
+            allowed_languages: ["en"]
 
     llm:
       provider: "openai"
@@ -28,5 +32,10 @@ experiment:
       file: "templates.yaml"
       key: "rag_standard_v1"
 
+  evaluator:
+    type: "language_mismatch"
+    expected_language: "en"
+    strict: true
+
   scenario:
-    id: "generator_only_naive_gpt4"
+    id: "base_64_naive_baseline"

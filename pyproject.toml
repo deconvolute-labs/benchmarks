@@ -7,7 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "openai",
     "pyyaml",
-    "deconvolute",
+    "deconvolute[all]",
     "chromadb>=0.4.0",
     "matplotlib>=3.10.8",
 ]
@@ -28,6 +28,9 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.14.11",
     "types-pyyaml>=6.0.12.20250915",
+]
+language = [
+    "langdetect>=1.0.9",
 ]
 
 [tool.uv]

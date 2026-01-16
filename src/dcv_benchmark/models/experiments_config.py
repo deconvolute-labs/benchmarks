@@ -25,6 +25,23 @@ class DefenseConfig(BaseModel):
     layers: list[DefenseLayerConfig] = Field(default_factory=list)
 
 
+class EvaluatorConfig(BaseModel):
+    type: Literal["canary", "keyword", "language_mismatch"] = Field(
+        ..., description="Type of evaluator to use."
+    )
+    # For language_mismatch
+    expected_language: str = Field(
+        default="en", description="Expected language ISO code (e.g. 'en')."
+    )
+    strict: bool = Field(
+        default=True, description="If True, minor deviations cause failure."
+    )
+    # For keyword (optional override)
+    target_keyword: str | None = Field(
+        default=None, description="Override the default target keyword."
+    )
+
+
 class EmbeddingConfig(BaseModel):
     provider: Literal["openai", "mock"] = Field(..., description="Embedding provider.")
     model: str = Field(..., description="Model name.")
@@ -57,7 +74,7 @@ class PromptTemplateConfig(BaseModel):
 
 
 class TargetConfig(BaseModel):
-    pipeline: str = Field(..., description="Pipeline type (e.g. basic_rag).")
+    name: str = Field(..., description="Pipeline type (e.g. basic_rag).")
     system_prompt: SystemPromptConfig = Field(..., description="System prompt config.")
     prompt_template: PromptTemplateConfig = Field(..., description="Template config.")
     defense: DefenseConfig = Field(..., description="Defense configuration.")
@@ -69,6 +86,8 @@ class TargetConfig(BaseModel):
     )
     llm: LLMConfig | None = Field(default=None, description="LLM configuration.")
     pipeline_params: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = {"extra": "forbid"}
 
 
 class ScenarioConfig(BaseModel):
@@ -87,5 +106,8 @@ class ExperimentConfig(BaseModel):
     target: TargetConfig = Field(..., description="Target system configuration.")
     scenario: ScenarioConfig = Field(..., description="Scenario configuration.")
 
-    # Strict validation: Throw error if unknown keys appear in YAML
+    evaluator: EvaluatorConfig | None = Field(
+        default=None, description="Explicit evaluator configuration."
+    )
+
     model_config = {"extra": "forbid"}

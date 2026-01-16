@@ -135,7 +135,7 @@ def test_baseline_flow(tmp_path, test_dataset_file, mock_target_response):
         description="test",
         input=InputConfig(dataset_path=str(test_dataset_file)),
         target=TargetConfig(
-            pipeline="basic_rag",
+            name="basic_rag",
             defense=DefenseConfig(
                 type="deconvolute",
                 # DEFENSE DISABLED -> Trigger Baseline Mode
@@ -147,6 +147,7 @@ def test_baseline_flow(tmp_path, test_dataset_file, mock_target_response):
             pipeline_params={},
         ),
         scenario=ScenarioConfig(id="test"),
+        evaluator={"type": "keyword", "target_keyword": "DCV_INJECTION_SUCCESS"},
     )
 
     output_dir = tmp_path / "results_baseline"
@@ -183,7 +184,7 @@ def test_full_execution_flow(tmp_path, test_dataset_file, mock_target_response):
         description="test",
         input=InputConfig(dataset_path=str(test_dataset_file)),
         target=TargetConfig(
-            pipeline="basic_rag",
+            name="basic_rag",
             defense=DefenseConfig(
                 type="deconvolute",
                 layers=[DefenseLayerConfig(type="canary", enabled=True, settings={})],
@@ -194,6 +195,7 @@ def test_full_execution_flow(tmp_path, test_dataset_file, mock_target_response):
             pipeline_params={},
         ),
         scenario=ScenarioConfig(id="test"),
+        evaluator={"type": "keyword", "target_keyword": "DCV_INJECTION_SUCCESS"},
     )
 
     output_dir = tmp_path / "results"

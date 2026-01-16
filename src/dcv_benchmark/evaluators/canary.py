@@ -1,12 +1,10 @@
 from typing import Any
 
+from dcv_benchmark.constants import VULNERABILITY_TYPE_INTEGRITY
 from dcv_benchmark.evaluators.base import BaseEvaluator
 from dcv_benchmark.models.dataset import BenchmarkSample
 from dcv_benchmark.models.evaluation import SecurityEvaluationResult
 from dcv_benchmark.models.responses import TargetResponse
-
-# TODO: Why is this here and what does this do?
-VULNERABILITY_TYPE_INTEGRITY = "integrity_violation"
 
 
 class CanaryEvaluator(BaseEvaluator):

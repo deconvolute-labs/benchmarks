@@ -32,8 +32,11 @@ This project uses `uv` for dependency management and environment isolation.
 ```bash
 git clone https://github.com/daved01/deconvolute-benchmark.git
 cd deconvolute-benchmark
-uv sync
+uv sync --all-extras
 ```
+
+There are some extras that you might not want to install:
+- `language`: for the `LanguageMismatchEvaluator`
 
 Optionally, activate the environment with `source .venv/bin/activate` so you don't need the prefix `uv run` for every command. We assume that the env is not activated for this Readme.
 
@@ -60,15 +63,31 @@ You can also run variants (e.g. `experiment_gpt4.yaml`) using the colon syntax:
 uv run dcv-bench run example:gpt4
 ```
 
-No code changes are required to modify attack strategies, sample sizes, languages, or model settings.
+No code changes are required to modify attack strategies, sample sizes, languages, or model settings. You can see an example configuration in `scenarios/example/experiment_example.yaml`.
 
-### Experiment Types and Templates
-The benchmark currently supports the following experiment types, each implemented via a configuration template in `experiments/templates/`.
+### Configuration Guide
+The benchmark uses a YAML configuration to define the pipeline, defenses, and evaluation criteria.
 
 
-| Experiment Type | Description | Template   |
-| :--------------- | :----------- | :---------- |
-| Generator integrity (Canary-based) | Detects indirect prompt injection attempts at the generator LLM stage using canary tokens. \*  | `generator-_canary.yaml`
+#### Defense Layers (target.defense)
+
+You can configure multiple defense layers in the basic_rag pipeline. Supported layers include:
+
+| Layer Type      | Description            | 
+| :---------------| :------------------------------------------ |
+`canary`	  | Injects and verifies a hidden token to detect prompt leakage/integrity violations. |
+`language`	| Enforces language policies (e.g. ensuring output remains in English).              |
+
+
+#### Evaluators (experiment.target.evaluator)
+
+The benchmark supports different evaluators depending on the experiment goal:
+
+| Evaluator Type      | Description              | Config Keys               |
+| :-------------------| :----------------------- | :----------------------- |
+| `canary`            | Checks if the Deconvolute SDK explicitly detected an integrity violation. | N/A | 
+| `keyword`           | Checks if a specific string (the attack payload) appears in the output. Useful for testing baseline vulnerability. |`target_keyword` | 
+| `language_mismatch` |"Checks if the output language matches the expected policy, or if the defense successfully blocked a violation." | `expected_language, strict` | 
 
 
 #### Notes
@@ -99,68 +118,6 @@ We map every result into one of four quadrants:
 - Goal: 1.0 (100%)
 
 **Latency:** The end-to-end execution time (seconds) for attack vs. benign samples.
-
-### Template Structure
-Each template contains metadata such as experiment `version`, `name`, a `description`, and is structured as follows:
-
-```yaml
-experiment:
-  # Metadata
-  # ...
-
-  target:
-    pipeline: "basic_rag"   # Maps to src/dcv_benchmark/targets/basic_rag.py
-    
-    # The Component Under Test
-    defense:
-      type: "deconvolute"
-      required_version: "0.1.0" # Optionally pin deconvolute version
-      layers:
-        - type: "input_filter"
-          enabled: false
-
-        - type: "canary"
-          enabled: true
-          settings: 
-            token_length: 16
-
-        - type: "output_sanitizer"
-          enabled: false
-
-    embedding:
-      provider: "openai"
-      model: "text-embedding-3-small"
-
-    retriever:
-      provider: "chroma"
-      top_k: 3
-      chunk_size: 500
-
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      temperature: 0 # For deterministic evaluation
-
-    # Fixed system instructions
-    system_prompt:
-      file: "system_prompts.yaml"
-      key: "promptA"
-
-    # Templates with placeholders for 'query' and 'context'
-    prompt_template:
-      file: "templates.yaml"
-      key: "templateA"
-
-  scenario:
-    id: "prompt_leakage"
-```
-
-**Main Keys:**
-
-- `input`: The dataset.
-- `target`: Defines the RAG pipeline to be evaluated, including the `defenses`.
-- `scenario`: Orchestrates the experiment using the input, target, and attacker.
-- `evaluator`: Defines what metrics are used for evaluation.
 
 
 ## Dataset Structure

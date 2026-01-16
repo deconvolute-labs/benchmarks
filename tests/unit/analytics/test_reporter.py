@@ -21,7 +21,7 @@ def mock_config():
         description="A test run",
         input={"dataset_path": "data.json"},
         target={
-            "pipeline": "rag",
+            "name": "rag",
             "defense": {
                 "type": "deconvolute",
                 "layer": {"type": "a", "enabled": True, "settings": {}},

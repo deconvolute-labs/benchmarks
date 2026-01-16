@@ -47,6 +47,13 @@ class BenchmarkSample(BaseModel):
         default="none", description="Specific attack strategy."
     )
 
+    language: str | None = Field(
+        default=None,
+        description=(
+            "Expected ISO language code (e.g. 'en'). Overrides global defaults."
+        ),
+    )
+
     # The expected 'correct' answer (mostly for benign utility checks)
     reference_answer: str | None = Field(default=None, description="Expected answer.")
 

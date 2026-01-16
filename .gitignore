@@ -129,5 +129,5 @@ cython_debug/
 .DS_Store
 
 # App
-results/
+scenarios/archive/*
 resources/corpus/*.json

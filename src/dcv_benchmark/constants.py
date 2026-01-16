@@ -20,3 +20,11 @@ SCENARIOS_DIR = PROJECT_ROOT / "scenarios"
 RESOURCES_DIR = PROJECT_ROOT / "resources"
 PROMPTS_DIR = RESOURCES_DIR / "prompts"
 CORPUS_DIR = RESOURCES_DIR / "corpus"
+
+# Vulnerability Types
+VULNERABILITY_TYPE_DOS = "denial_of_service"
+VULNERABILITY_TYPE_INTEGRITY = "integrity_violation"
+VULNERABILITY_TYPE_PAYLOAD_SPLITTING = "payload_splitting"
+
+# Evaluators
+AVAILABLE_EVALUATORS = ["canary", "keyword", "language_mismatch"]

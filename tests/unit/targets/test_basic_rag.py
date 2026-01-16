@@ -98,7 +98,7 @@ def test_init_canary_enabled(mock_config):
     mock_config.defense.layers = [canary_layer]
 
     with (
-        patch("dcv_benchmark.targets.basic_rag.Canary") as MockCanary,
+        patch("dcv_benchmark.targets.basic_rag.CanaryDetector") as MockCanary,
         patch("dcv_benchmark.targets.basic_rag.create_llm"),
         patch("dcv_benchmark.targets.basic_rag.create_vector_store"),
         patch("dcv_benchmark.targets.basic_rag.load_prompt_text"),
@@ -175,7 +175,9 @@ def test_invoke_canary_protection(basic_rag):
     # Verify inject called with loaded system prompt (from fixture side_effect)
     basic_rag.canary.inject.assert_called_once_with("You are a helpful assistant.")
 
-    basic_rag.canary.check.assert_called_once_with("Raw Response token123", "token123")
+    basic_rag.canary.check.assert_called_once_with(
+        "Raw Response token123", token="token123"
+    )
     basic_rag.canary.clean.assert_called_once_with("Raw Response token123", "token123")
     assert response.content == "Cleaned Response"
 
