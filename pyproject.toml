@@ -1,13 +1,13 @@
 [project]
 name = "deconvolute-benchmark"
 version = "0.1.0"
-description = "Reproducible security benchmarking for the Deconvolute SDK and RAG integrity against adversarial attacks."
+description = "Reproducible security benchmarking for the Deconvolute SDK and AI system integrity against adversarial attacks.."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "openai",
     "pyyaml",
-    "deconvolute[all]",
+    "deconvolute[language]",
     "chromadb>=0.4.0",
     "matplotlib>=3.10.8",
 ]
@@ -24,6 +24,7 @@ data = [
 
 [dependency-groups]
 dev = [
+    "langdetect>=1.0.9",
     "mypy>=1.19.1",
     "pytest-cov>=7.0.0",
     "ruff>=0.14.11",
