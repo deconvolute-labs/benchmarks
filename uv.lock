@@ -487,20 +487,16 @@ wheels = [
 
 [[package]]
 name = "deconvolute"
-version = "0.1.0a5"
+version = "0.1.0a6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "lingua-language-detector" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/04/cd/fb2e4c8e07496da54313bd7d9a3ba73fbcd656d8b991db96d47983f6816c/deconvolute-0.1.0a5.tar.gz", hash = "sha256:712f678bd0b05cd9921d4472284ce093278dcc7c9e9e565627c0fa24e3efd8c7", size = 77248, upload-time = "2026-01-16T09:54:37.023Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8b/f8/a4b2ad17c5ca566aa9d54d9f68badded288eef553e27a2ba7a8e4a54d7c0/deconvolute-0.1.0a6.tar.gz", hash = "sha256:7baacfcf42794bdb98cf9edf14b2d491623f3c2d4b2e065486a3e98c3f0decd9", size = 88890, upload-time = "2026-01-20T13:12:02.778Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/05/65/d82e3d07ef86af66f77d949648fc14d350395d7bda294ac92091cc086a5d/deconvolute-0.1.0a5-py3-none-any.whl", hash = "sha256:80f2717b8b5cf7fbeae903dc6814945c17094da99df7c2d4d829a3708260d05f", size = 17356, upload-time = "2026-01-16T09:54:35.612Z" },
-]
-
-[package.optional-dependencies]
-language = [
-    { name = "lingua-language-detector" },
+    { url = "https://files.pythonhosted.org/packages/05/35/f84041d9dc37e383677b384dec493025d8e9d4fed32c710032f76b927dff/deconvolute-0.1.0a6-py3-none-any.whl", hash = "sha256:a4022b277e73bb8eadee1067a22d47a4d547447114cba621b248c0489318a10f", size = 25784, upload-time = "2026-01-20T13:12:01.242Z" },
 ]
 
 [[package]]
@@ -509,7 +505,8 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "chromadb" },
-    { name = "deconvolute", extra = ["language"] },
+    { name = "deconvolute" },
+    { name = "langdetect" },
     { name = "matplotlib" },
     { name = "openai" },
     { name = "pyyaml" },
@@ -524,21 +521,18 @@ data = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "langdetect" },
     { name = "mypy" },
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "types-pyyaml" },
-]
-language = [
-    { name = "langdetect" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "chromadb", specifier = ">=0.4.0" },
     { name = "datasets", marker = "extra == 'data'", specifier = ">=4.4.2" },
-    { name = "deconvolute", extras = ["language"] },
+    { name = "deconvolute" },
+    { name = "langdetect", specifier = ">=1.0.9" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "openai" },
     { name = "pyyaml" },
@@ -549,13 +543,11 @@ provides-extras = ["data"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "langdetect", specifier = ">=1.0.9" },
     { name = "mypy", specifier = ">=1.19.1" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.14.11" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
 ]
-language = [{ name = "langdetect", specifier = ">=1.0.9" }]
 
 [[package]]
 name = "dill"

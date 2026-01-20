@@ -46,10 +46,6 @@ cd deconvolute-benchmark
 uv sync --all-extras
 ```
 
-Optional extras are available. Currently:
-- `language`: for the `LanguageMismatchEvaluator`
-
-
 The virtual environment may be activated with `source .venv/bin/activate` to avoid prefixing commands with `uv run`. The examples below assume the environment is not activated.
 
 
@@ -82,16 +78,14 @@ Attack strategies, dataset properties, and model settings are modified entirely 
 Experiments are defined using YAML files that describe the pipeline, defense layers, and evaluation logic.
 
 
-#### Defense Layers (target.defense)
-Multiple defense layers from the `deconvolute` SDK can be composed in the pipeline using the config file. Supported layers include:
+#### Evaluators
+Multiple defense layers from the `deconvolute` SDK can be composed in the pipeline using the config file. Then `Evaluators` can be added to evaluate how the SDK performs. The following evaluators are available:
 
-| Layer Type          | Description                                                   | Config                      |
-| :------------------ | :------------------------------------------------------------ | :-------------------------- | 
-| `canary`	          | Checks for explicit integrity violation signals from the SDK. | N/A                         |
-| `keyword`	          | Detects the presence of an injected payload in the output.    | `target_keyword`            | 
-| `language_mismatch`	| Detects violations of the expected output language.           | `expected_language`, `strict` |
-
-Observable signals from multiple defense layers are used to detect integrity violations. Prior work shows that indirect prompt injection can exploit weaknesses in instruction handling, making layered defenses essential for reliable detection.
+| Layer Type          | Description                                                   | Config                       |
+| :------------------ | :------------------------------------------------------------ | :----------------------------| 
+| `canary`	          | Checks for explicit integrity violation signals from the SDK. | N/A                          |
+| `keyword`	          | Detects the presence of an injected payload in the output.    | `target_keyword`             | 
+| `language_mismatch` | Detects violations of the expected output language.           | `expected_language`, `strict`|
 
 
 ### Evaluation Metrics

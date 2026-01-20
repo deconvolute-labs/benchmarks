@@ -19,6 +19,12 @@ class DefenseConfig(BaseModel):
     type: Literal["deconvolute", "none"] = Field(
         default="deconvolute", description="Defense provider."
     )
+    strategy: Literal["layers", "guard"] = Field(
+        default="layers",
+        description=(
+            "Integration strategy: 'layers' (manual) or 'guard' (orchestrator)."
+        ),
+    )
     required_version: str | None = Field(
         default=None, description="Min version required."
     )

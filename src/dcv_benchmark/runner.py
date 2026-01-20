@@ -18,6 +18,7 @@ from dcv_benchmark.models.experiments_config import ExperimentConfig
 from dcv_benchmark.models.responses import TargetResponse
 from dcv_benchmark.models.traces import TraceItem
 from dcv_benchmark.targets.basic_rag import BasicRAG
+from dcv_benchmark.targets.basic_rag_guard import BasicRAGGuard
 from dcv_benchmark.utils.dataset_loader import DatasetLoader
 from dcv_benchmark.utils.logger import get_logger, print_run_summary
 
@@ -85,7 +86,19 @@ class ExperimentRunner:
 
         logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
         logger.info(f"Description: {dataset.meta.description}")
-        target = BasicRAG(experiment_config.target)
+
+        # Select pipeline
+        target: BasicRAG | BasicRAGGuard | None = None
+        target_name = experiment_config.target.name
+        if target_name == "basic_rag":
+            target = BasicRAG(experiment_config.target)
+        elif target_name == "basic_rag_guard":
+            target = BasicRAGGuard(experiment_config.target)
+        else:
+            raise ValueError(
+                f"Unsupported target: '{target_name}'. "
+                "Available targets: 'basic_rag', 'basic_rag_guard'."
+            )
 
         # Evaluator Setup
         eval_config = experiment_config.evaluator
