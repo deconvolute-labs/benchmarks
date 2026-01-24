@@ -1,6 +1,6 @@
 # Deconvolute SDK Integrity Benchmark
 
-[![CI](https://github.com/daved01/deconvolute-benchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/daved01/deconvolute-benchmark/actions/workflows/ci.yml)
+[![CI](https://github.com/deconvolute-labs/benchmarks/actions/workflows/ci.yml/badge.svg)](https://github.com/deconvolute-labs/benchmarks/actions/workflows/ci.yml)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/)
 [![Dependency Manager: uv](https://img.shields.io/badge/uv-managed-purple)](https://github.com/astral-sh/uv)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
