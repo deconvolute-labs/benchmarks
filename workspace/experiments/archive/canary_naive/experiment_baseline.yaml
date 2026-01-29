@@ -1,0 +1,32 @@
+experiment:
+  name: "canary_naive_baseline"
+  description: "Baseline for naive indirect prompt injection attacks."
+  version: "0.1"
+
+  target:
+    pipeline: "basic_rag"
+    
+    defense:
+      type: "deconvolute"
+      required_version: "0.1.0a4"
+      layers:
+        - type: "canary"
+          enabled: false
+          settings: 
+            token_length: 16
+
+    llm:
+      provider: "openai"
+      model: "gpt-4.1-mini"
+      temperature: 0
+
+    system_prompt:
+      file: "system_prompts.yaml"
+      key: "gakh_bahsi_baseline"
+
+    prompt_template:
+      file: "templates.yaml"
+      key: "rag_standard_v1"
+
+  scenario:
+    id: "generator_only_naive_baseline"

@@ -15,11 +15,20 @@ RESULTS_ARTIFACT_FILENAME = "results.json"
 TRACES_FILENAME = "traces.jsonl"
 
 # Directory Constants
-PROJECT_ROOT = Path(__file__).parents[2]
-SCENARIOS_DIR = PROJECT_ROOT / "scenarios"
-RESOURCES_DIR = PROJECT_ROOT / "resources"
-PROMPTS_DIR = RESOURCES_DIR / "prompts"
-CORPUS_DIR = RESOURCES_DIR / "corpus"
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+WORKSPACE_DIR = PROJECT_ROOT / "workspace"
+DATASETS_DIR = WORKSPACE_DIR / "datasets"
+EXPERIMENTS_DIR = WORKSPACE_DIR / "experiments"
+PROMPTS_DIR = WORKSPACE_DIR / "prompts"
+
+# Sub-directories
+RAW_DATASETS_DIR = DATASETS_DIR / "raw"
+BUILT_DATASETS_DIR = DATASETS_DIR / "built"
+CORPUS_DIR = RAW_DATASETS_DIR
+
+# Default Paths (Backward Compatibility / Defaults)
+DEFAULT_SYSTEM_PROMPTS_PATH = PROMPTS_DIR / "system_prompts.yaml"
+DEFAULT_TEMPLATES_PATH = PROMPTS_DIR / "templates.yaml"
 
 # Vulnerability Types
 VULNERABILITY_TYPE_DOS = "denial_of_service"

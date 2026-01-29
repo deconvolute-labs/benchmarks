@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from dcv_benchmark.constants import SCENARIOS_DIR
+from dcv_benchmark.constants import BUILT_DATASETS_DIR
 from dcv_benchmark.data_factory.builder import DatasetBuilder
 from dcv_benchmark.data_factory.injector import AttackInjector
 from dcv_benchmark.data_factory.loaders import SquadLoader
@@ -29,20 +29,17 @@ def load_factory_config(path: Path) -> DataFactoryConfig:
 def resolve_data_target(target: str) -> Path:
     """
     Resolves the 'target' argument to a config file path.
-    1. Checks if 'target' is a scenario name (folder in SCENARIOS_DIR).
+    1. Checks if 'target' is a dataset name (folder in BUILT_DATASETS_DIR).
        If so, looks for 'dataset_config.yaml' inside it.
     2. Checks if 'target' is a direct file path.
     """
-    # Try Scenario Name
-    scenario_dir = SCENARIOS_DIR / target
-    if scenario_dir.exists() and scenario_dir.is_dir():
-        # It's a valid scenario folder
-        config_candidate = scenario_dir / "dataset_config.yaml"
+    # Try Dataset Name
+    dataset_dir = BUILT_DATASETS_DIR / target
+    if dataset_dir.exists() and dataset_dir.is_dir():
+        # It's a valid dataset folder
+        config_candidate = dataset_dir / "dataset_config.yaml"
         if config_candidate.exists():
             return config_candidate
-
-        # If folder exists but config is missing, we check if it's a path below,
-        # but we'll likely want to error out if it's not a path.
 
     # Try File Path
     path = Path(target)
@@ -50,14 +47,14 @@ def resolve_data_target(target: str) -> Path:
         return path
 
     # Error Handling
-    if scenario_dir.exists() and scenario_dir.is_dir():
+    if dataset_dir.exists() and dataset_dir.is_dir():
         raise FileNotFoundError(
-            f"Scenario '{target}' found, but missing 'dataset_config.yaml' "
-            f"at {scenario_dir / 'dataset_config.yaml'}"
+            f"Dataset folder '{target}' found, but missing 'dataset_config.yaml' "
+            f"at {dataset_dir / 'dataset_config.yaml'}"
         )
 
     raise FileNotFoundError(
-        f"Target not found. Checked scenario '{scenario_dir}' and path '{path}'."
+        f"Target not found. Checked dataset folder '{dataset_dir}' and path '{path}'."
     )
 
 

@@ -38,7 +38,7 @@ package = true
 line-length = 88
 target-version = "py313"
 src = ["src", "tests"]
-exclude = ["resources"]
+exclude = ["workspace"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -60,7 +60,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
-exclude = ["tests/", "resources/"]
+exclude = ["tests/", "workspace/"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
