@@ -4,14 +4,34 @@ from pydantic import BaseModel, Field
 
 
 class InputConfig(BaseModel):
-    dataset_path: str | None = Field(
-        default=None, description="Path to the dataset JSON file"
+    dataset_name: str | None = Field(
+        default=None, description="Name of the dataset (e.g. 'squad_canary_v1')"
     )
 
 
-class DefenseLayerConfig(BaseModel):
-    type: str = Field(..., description="Type of defense layer.")
-    enabled: bool = Field(..., description="Whether this layer is active.")
+class CanaryConfig(BaseModel):
+    enabled: bool = Field(
+        default=False, description="Whether canary defense is active."
+    )
+    settings: dict[str, Any] = Field(default_factory=dict)
+
+
+class LanguageConfig(BaseModel):
+    enabled: bool = Field(
+        default=False, description="Whether language defense is active."
+    )
+    settings: dict[str, Any] = Field(default_factory=dict)
+
+
+class YaraConfig(BaseModel):
+    enabled: bool = Field(default=False, description="Whether YARA defense is active.")
+    settings: dict[str, Any] = Field(default_factory=dict)
+
+
+class MLScannerConfig(BaseModel):
+    enabled: bool = Field(
+        default=False, description="Whether ML scanner defense is active."
+    )
     settings: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -28,7 +48,12 @@ class DefenseConfig(BaseModel):
     required_version: str | None = Field(
         default=None, description="Min version required."
     )
-    layers: list[DefenseLayerConfig] = Field(default_factory=list)
+
+    # Explicit Defense Layers
+    canary: CanaryConfig | None = Field(default=None)
+    language: LanguageConfig | None = Field(default=None)
+    yara: YaraConfig | None = Field(default=None)
+    ml_scanner: MLScannerConfig | None = Field(default=None)
 
 
 class EvaluatorConfig(BaseModel):

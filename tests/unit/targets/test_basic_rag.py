@@ -15,7 +15,11 @@ def mock_config():
     config.embedding = MagicMock()
     config.retriever = MagicMock()
     config.defense = MagicMock()
-    config.defense.layers = []
+    # Set defense fields to None to avoid MagicMock truthiness (defaults to True)
+    config.defense.canary = None
+    config.defense.language = None
+    config.defense.yara = None
+    config.defense.ml_scanner = None
 
     # Mock system_prompt and prompt_template as objects with path/key
     config.prompt_template = MagicMock()
@@ -92,10 +96,10 @@ def test_init_no_retriever(mock_config):
 
 
 def test_init_canary_enabled(mock_config):
-    canary_layer = MagicMock()
-    canary_layer.type = "canary"
-    canary_layer.enabled = True
-    mock_config.defense.layers = [canary_layer]
+    canary_config = MagicMock()
+    canary_config.enabled = True
+    canary_config.settings = {}
+    mock_config.defense.canary = canary_config
 
     with (
         patch("dcv_benchmark.targets.basic_rag.CanaryDetector") as MockCanary,

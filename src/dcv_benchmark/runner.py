@@ -80,9 +80,9 @@ class ExperimentRunner:
         # We assume the dataset path is relative to the project root
         logger.info("Initializing components...")
 
-        if not experiment_config.input.dataset_path:
-            raise ValueError("Cannot find path to dataset!")
-        dataset: Dataset = DatasetLoader(experiment_config.input.dataset_path).load()
+        if not experiment_config.input.dataset_name:
+            raise ValueError("Cannot find dataset name in config!")
+        dataset: Dataset = DatasetLoader(experiment_config.input.dataset_name).load()
 
         logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
         logger.info(f"Description: {dataset.meta.description}")

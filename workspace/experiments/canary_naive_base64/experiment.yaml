@@ -4,7 +4,7 @@ experiment:
   version: "0.1"
 
   input:
-    dataset_path: "../../datasets/built/squad_canary_v1/dataset.json"
+    dataset_name: "squad_canary_v1"
 
   target:
     name: "basic_rag"
@@ -12,15 +12,16 @@ experiment:
     defense:
       type: "deconvolute"
       required_version: "0.1.0a5"
-      layers:
-        - type: "canary"
-          enabled: true
-          settings: 
-            token_length: 16
-        - type: "language"
-          enabled: true
-          settings:
-            allowed_languages: ["en"]
+      
+      canary:
+        enabled: true
+        settings:
+          token_length: 16
+      
+      language:
+        enabled: true
+        settings:
+          allowed_languages: ["en"]
 
     llm:
       provider: "openai"
