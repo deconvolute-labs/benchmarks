@@ -2,10 +2,10 @@ experiment:
   name: "example_experiment"
   description: "An example of a full config file."
 
-  # Optional. By default points to 'scenarios/<name>/dataset.json' so here
-  # 'scenarios/example/dataset.json'
+  # Optional. By default points to 'workspace/datasets/built/<name>/dataset.json'
+  # Or provide a direct path ending in .json
   input:
-    dataset_path: "scenarios/example/dataset.json"
+    dataset_name: "workspace/experiments/example/dataset.json"
 
   # System Under Test
   target:
@@ -15,22 +15,21 @@ experiment:
     defense:
       type: "deconvolute"
       required_version: "0.1.0" # Optionally require version
-      layers:
-        # Layer 1: Input Filtering (Placeholder for future implementation)
-        - type: "input_filter"
-          enabled: false
+      
+      # Explicit definition of layers
+      canary:
+        enabled: true
+        settings:
+          token_length: 16
+      
+      language:
+        enabled: true
+        settings:
+          allowed_languages: ["en"]
 
-        # Layer 2: Canary Defense (Integrity Check)
-        - type: "canary"
-          enabled: true
-          settings: 
-            token_length: 16
-
-        # Layer 3: Language Enforcement
-        - type: "language"
-          enabled: true
-          settings:
-            allowed_languages: ["en"]
+      # Placeholder logic for other potential modules
+      # yara: 
+      #   enabled: false
 
     embedding:
       provider: "openai" # or "mock"

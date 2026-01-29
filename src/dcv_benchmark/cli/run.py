@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from dcv_benchmark.cli.data import generate_dataset, load_factory_config
-from dcv_benchmark.constants import SCENARIOS_DIR
+from dcv_benchmark.constants import EXPERIMENTS_DIR
 from dcv_benchmark.runner import ExperimentRunner
 from dcv_benchmark.utils.experiment_loader import load_experiment
 from dcv_benchmark.utils.logger import (
@@ -30,14 +30,15 @@ def parse_scenario_argument(arg: str) -> tuple[str, str]:
     return arg, ""
 
 
-def resolve_scenario_paths(scenario_name: str, variant: str) -> Path:
+def resolve_experiment_paths(scenario_name: str, variant: str) -> Path:
     """
-    Locates the experiment config file within the scenarios directory.
+    Locates the experiment config file within the experiments directory.
     """
-    scenario_dir = SCENARIOS_DIR / scenario_name
+    # We still use "scenario_name" as the folder name for the experiment
+    experiment_dir = EXPERIMENTS_DIR / scenario_name
 
-    if not scenario_dir.exists():
-        raise FileNotFoundError(f"Scenario directory not found: {scenario_dir}")
+    if not experiment_dir.exists():
+        raise FileNotFoundError(f"Experiment directory not found: {experiment_dir}")
 
     # Determine filename: experiment.yaml or experiment_<variant>.yaml
     if variant:
@@ -45,12 +46,12 @@ def resolve_scenario_paths(scenario_name: str, variant: str) -> Path:
     else:
         filename = "experiment.yaml"
 
-    config_path = scenario_dir / filename
+    config_path = experiment_dir / filename
 
     if not config_path.exists():
         msg = (
             f"Experiment config not found: {config_path}\n"
-            f"Expected a file named '{filename}' in '{scenario_dir}'."
+            f"Expected a file named '{filename}' in '{experiment_dir}'."
         )
 
         # Suggest colon syntax if they tried the default
@@ -61,7 +62,7 @@ def resolve_scenario_paths(scenario_name: str, variant: str) -> Path:
             )
 
         # List what IS there
-        existing_yamls = [f.name for f in scenario_dir.glob("*.yaml")]
+        existing_yamls = [f.name for f in experiment_dir.glob("*.yaml")]
         if existing_yamls:
             msg += f"\nAvailable configs: {', '.join(existing_yamls)}"
 
@@ -86,9 +87,9 @@ def ensure_dataset_exists(experiment_config: Any, config_path: Path) -> None:
         if raw_path.is_absolute():
             dataset_path = raw_path
         else:
-            dataset_path = config_path.parent / raw_path
+            dataset_path = (config_path.parent / raw_path).resolve()
     else:
-        # DEFAULT: No path provided -> assume "dataset.json" in scenario folder
+        # DEFAULT: No path provided -> THIS IS NOW DEPRECATED
         dataset_path = config_path.parent / "dataset.json"
 
     # Update the config object with the absolute path so the runner finds it
@@ -99,24 +100,27 @@ def ensure_dataset_exists(experiment_config: Any, config_path: Path) -> None:
         return
 
     # Dataset missing - Try to generate
-    logger.warning(
-        f"Dataset not found at {dataset_path}. Attempting lazy generation..."
-    )
+    logger.warning(f"Dataset not found at {dataset_path}.")
+
+    # In the new structure, we don't look for dataset_config.yaml
+    # in the experiment folder UNLESS the user explicitly tells us it's there.
+    # However, for backward compatibility or ease of use, we can check if it exists.
 
     scenario_dir = config_path.parent
     dataset_config_path = scenario_dir / "dataset_config.yaml"
 
-    if not dataset_config_path.exists():
-        raise FileNotFoundError(
-            f"Dataset is missing and cannot be generated.\n"
-            f"Expected 'dataset_config.yaml' at {dataset_config_path}"
-        )
+    if dataset_config_path.exists():
+        logger.info("Found local 'dataset_config.yaml', attempting generation...")
+        factory_config = load_factory_config(dataset_config_path)
+        generate_dataset(factory_config, dataset_path)
+        return
 
-    logger.info(f"Generating dataset from {dataset_config_path}...")
-
-    # Generation Logic
-    factory_config = load_factory_config(dataset_config_path)
-    generate_dataset(factory_config, dataset_path)
+    # If we are here, we can't generate it.
+    raise FileNotFoundError(
+        f"Dataset is missing and cannot be generated.\n"
+        f"Please ensure 'input.dataset_path' is correct in your experiment config.\n"
+        f"Checked path: {dataset_path}"
+    )
 
 
 def run_experiment_command(args: argparse.Namespace) -> None:
@@ -126,7 +130,7 @@ def run_experiment_command(args: argparse.Namespace) -> None:
     try:
         # Resolve Paths
         scenario_name, variant = parse_scenario_argument(args.target)
-        config_path = resolve_scenario_paths(scenario_name, variant)
+        config_path = resolve_experiment_paths(scenario_name, variant)
 
         scenario_dir = config_path.parent
 

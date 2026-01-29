@@ -4,8 +4,8 @@ import pytest
 
 from dcv_benchmark.constants import BASELINE_TARGET_KEYWORD
 from dcv_benchmark.models.experiments_config import (
+    CanaryConfig,
     DefenseConfig,
-    DefenseLayerConfig,
     EvaluatorConfig,
     ExperimentConfig,
     InputConfig,
@@ -32,12 +32,12 @@ def valid_config():
     return ExperimentConfig(
         name="unit_test_exp",
         description="unit test",
-        input=InputConfig(dataset_path="dummy.json"),
+        input=InputConfig(dataset_name="dummy.json"),
         target=TargetConfig(
             name="basic_rag",
             defense=DefenseConfig(
                 type="deconvolute",
-                layers=[DefenseLayerConfig(type="canary", enabled=True, settings={})],
+                canary=CanaryConfig(enabled=True, settings={}),
             ),
             # Minimal other fields to pass validation
             system_prompt={"file": "s", "key": "k"},
@@ -58,9 +58,9 @@ def test_init_creates_dir(tmp_path):
 
 def test_run_missing_dataset_path(valid_config, tmp_path):
     runner = ExperimentRunner(output_dir=tmp_path)
-    valid_config.input.dataset_path = None
+    valid_config.input.dataset_name = None
 
-    with pytest.raises(ValueError, match="Cannot find path to dataset"):
+    with pytest.raises(ValueError, match="Cannot find dataset name in config"):
         runner.run(valid_config)
 
 

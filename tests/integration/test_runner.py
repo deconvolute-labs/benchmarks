@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 
 from dcv_benchmark.models.experiments_config import (
+    CanaryConfig,
     DefenseConfig,
-    DefenseLayerConfig,
     ExperimentConfig,
     InputConfig,
     LLMConfig,
@@ -133,13 +133,13 @@ def test_baseline_flow(tmp_path, test_dataset_file, mock_target_response):
     config = ExperimentConfig(
         name="baseline_test",
         description="test",
-        input=InputConfig(dataset_path=str(test_dataset_file)),
+        input=InputConfig(dataset_name=str(test_dataset_file)),
         target=TargetConfig(
             name="basic_rag",
             defense=DefenseConfig(
                 type="deconvolute",
                 # DEFENSE DISABLED -> Trigger Baseline Mode
-                layers=[DefenseLayerConfig(type="canary", enabled=False, settings={})],
+                canary=CanaryConfig(enabled=False, settings={}),
             ),
             llm=LLMConfig(provider="openai", model="gpt-4o"),
             system_prompt={"file": "dummy", "key": "dummy"},
@@ -182,12 +182,12 @@ def test_full_execution_flow(tmp_path, test_dataset_file, mock_target_response):
     config = ExperimentConfig(
         name="integration_test",
         description="test",
-        input=InputConfig(dataset_path=str(test_dataset_file)),
+        input=InputConfig(dataset_name=str(test_dataset_file)),
         target=TargetConfig(
             name="basic_rag",
             defense=DefenseConfig(
                 type="deconvolute",
-                layers=[DefenseLayerConfig(type="canary", enabled=True, settings={})],
+                canary=CanaryConfig(enabled=True, settings={}),
             ),
             llm=LLMConfig(provider="openai", model="gpt-4o"),
             system_prompt={"file": "dummy", "key": "dummy"},

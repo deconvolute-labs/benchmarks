@@ -82,3 +82,28 @@ def test_validation_missing_fields(tmp_path, valid_dataset_json):
     loader = DatasetLoader(str(p))
     with pytest.raises(ValidationError):
         loader.load()
+
+
+def test_resolve_implicit_name(tmp_path, valid_dataset_json):
+    """It should resolve a simple name to BUILT_DATASETS_DIR/{name}/dataset.json."""
+    # Create the structure: tmp/built/my_dataset/dataset.json
+    built_dir = tmp_path / "built"
+    dataset_dir = built_dir / "my_dataset"
+    dataset_dir.mkdir(parents=True)
+
+    p = dataset_dir / "dataset.json"
+    with open(p, "w") as f:
+        json.dump(valid_dataset_json, f)
+
+    # Patch the constant in the module
+    with pytest.MonkeyPatch.context() as m:
+        from dcv_benchmark.utils import dataset_loader
+
+        m.setattr(dataset_loader, "BUILT_DATASETS_DIR", built_dir)
+
+        loader = DatasetLoader("my_dataset")
+        dataset = loader.load()
+
+        assert dataset.meta.name == "test_dataset"
+        # Verify it resolved to the correct path
+        assert loader.path == p

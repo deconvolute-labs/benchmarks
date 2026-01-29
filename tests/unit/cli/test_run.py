@@ -11,7 +11,7 @@ from dcv_benchmark.cli.run import run_experiment_command
 def mock_dependencies():
     with (
         patch("dcv_benchmark.cli.run.setup_logger") as mock_setup_logger,
-        patch("dcv_benchmark.cli.run.resolve_scenario_paths") as mock_resolve_path,
+        patch("dcv_benchmark.cli.run.resolve_experiment_paths") as mock_resolve_path,
         patch("dcv_benchmark.cli.run.load_experiment") as mock_load_exp,
         patch("dcv_benchmark.cli.run.print_experiment_header") as mock_print_header,
         patch("dcv_benchmark.cli.run.ensure_dataset_exists") as mock_ensure_data,

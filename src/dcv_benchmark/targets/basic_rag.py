@@ -57,19 +57,23 @@ class BasicRAG(BaseTarget):
         # We allow for a flexible language detector slot
         self.language_detector: LanguageDetector | None = None
 
-        for layer in config.defense.layers:
-            if layer.enabled:
-                if layer.type == "canary":
-                    self.canary_enabled = True
-                    logger.info("Deconvolute Canary defense ENABLED.")
+        # Check for explicit defense layers in the new config structure
+        if config.defense.canary and config.defense.canary.enabled:
+            self.canary_enabled = True
+            log_msg = "Deconvolute Canary defense ENABLED."
+            if config.defense.canary.settings:
+                log_msg += f" Settings: {config.defense.canary.settings}"
+            logger.info(log_msg)
 
-                elif layer.type == "language":
-                    # Initialize with settings from YAML (e.g. allowed_languages=['en'])
-                    self.language_detector = LanguageDetector(**layer.settings)
-                    logger.info(
-                        "Deconvolute Language defense ENABLED. "
-                        f"Config: {layer.settings}"
-                    )
+        if config.defense.language and config.defense.language.enabled:
+            # Initialize with settings from YAML (e.g. allowed_languages=['en'])
+            self.language_detector = LanguageDetector(
+                **config.defense.language.settings
+            )
+            logger.info(
+                "Deconvolute Language defense ENABLED. "
+                f"Config: {config.defense.language.settings}"
+            )
 
         # Load system prompt
         self.system_prompt: str = load_prompt_text(
