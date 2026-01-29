@@ -15,7 +15,7 @@ from dcv_benchmark.models.dataset import (
 )
 from dcv_benchmark.utils.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 class DatasetBuilder:

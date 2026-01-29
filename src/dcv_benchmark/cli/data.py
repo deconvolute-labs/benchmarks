@@ -1,140 +1,170 @@
 import argparse
+import shutil
 import sys
 from pathlib import Path
-from typing import Any
 
 import yaml
 
-from dcv_benchmark.constants import BUILT_DATASETS_DIR
+from dcv_benchmark.constants import BUILT_DATASETS_DIR, RAW_DATASETS_DIR
 from dcv_benchmark.data_factory.builder import DatasetBuilder
+from dcv_benchmark.data_factory.downloader import download_bipia, download_squad
 from dcv_benchmark.data_factory.injector import AttackInjector
 from dcv_benchmark.data_factory.loaders import SquadLoader
 from dcv_benchmark.models.data_factory import DataFactoryConfig
-from dcv_benchmark.utils.logger import get_logger, print_dataset_header
+from dcv_benchmark.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-def load_factory_config(path: Path) -> DataFactoryConfig:
-    """Helper to load and validate the Data Factory YAML config."""
-    try:
-        with open(path, encoding="utf-8") as f:
-            raw = yaml.safe_load(f)
-        return DataFactoryConfig(**raw)
-    except Exception as e:
-        logger.error(f"Failed to parse config file {path}: {e}")
-        sys.exit(1)
-
-
-def resolve_data_target(target: str) -> Path:
+def handle_download(args: argparse.Namespace) -> None:
     """
-    Resolves the 'target' argument to a config file path.
-    1. Checks if 'target' is a dataset name (folder in BUILT_DATASETS_DIR).
-       If so, looks for 'dataset_config.yaml' inside it.
-    2. Checks if 'target' is a direct file path.
+    Handles the 'data download' command.
+    Fetches raw datasets (SQuAD, BIPIA) to the workspace.
     """
-    # Try Dataset Name
-    dataset_dir = BUILT_DATASETS_DIR / target
-    if dataset_dir.exists() and dataset_dir.is_dir():
-        # It's a valid dataset folder
-        config_candidate = dataset_dir / "dataset_config.yaml"
-        if config_candidate.exists():
-            return config_candidate
+    source = args.source
 
-    # Try File Path
-    path = Path(target)
-    if path.exists():
-        return path
+    # Determine output directory
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+    else:
+        # Default: workspace/datasets/raw/{source}
+        output_dir = RAW_DATASETS_DIR / source
 
-    # Error Handling
-    if dataset_dir.exists() and dataset_dir.is_dir():
-        raise FileNotFoundError(
-            f"Dataset folder '{target}' found, but missing 'dataset_config.yaml' "
-            f"at {dataset_dir / 'dataset_config.yaml'}"
-        )
-
-    raise FileNotFoundError(
-        f"Target not found. Checked dataset folder '{dataset_dir}' and path '{path}'."
-    )
-
-
-def generate_dataset(config: DataFactoryConfig, output_path: Path) -> None:
-    """
-    Core logic to generate and save a dataset based on the provided config.
-    """
-    print_dataset_header(config.model_dump())
-
-    loader = SquadLoader()
-    injector = AttackInjector(config=config)
-
-    logger.debug(f"Initializing DatasetBuilder for '{config.dataset_name}'...")
-    builder = DatasetBuilder(loader=loader, injector=injector, config=config)
-
-    logger.info("Starting build process (Indexing -> Retrieving -> Injecting)...")
-    dataset = builder.build()
-
-    logger.info(f"Saving dataset to {output_path}...")
-    builder.save(dataset, output_path)
-    logger.info("Done.")
-
-
-def run_generate_dataset(args: argparse.Namespace) -> None:
-    """Handler for the 'data generate' command."""
-    try:
-        config_path = resolve_data_target(args.target)
-        logger.debug(f"Resolved dataset config: {config_path}")
-    except FileNotFoundError as e:
-        logger.error(str(e))
-        sys.exit(1)
-
-    logger.debug(f"Loading Data Factory config from {config_path}...")
-    config = load_factory_config(config_path)
+    logger.info(f"Preparing to download '{source}' data to {output_dir}...")
 
     try:
-        # Determine output path
-        if args.output:
-            output_path = Path(args.output)
+        if source == "squad":
+            download_squad(output_dir)
+        elif source == "bipia":
+            download_bipia(output_dir)
         else:
-            # Default: dataset.json in the same folder as the config
-            output_path = config_path.parent / "dataset.json"
-
-        # Safety check
-        if output_path.exists() and not args.force:
-            logger.error(f"Output file already exists: {output_path}")
-            logger.error("Use --force to overwrite it.")
+            logger.error(f"Unknown source: '{source}'. Options: squad, bipia")
             sys.exit(1)
 
-        generate_dataset(config, output_path)
+        logger.info(f"Download of '{source}' complete.")
 
-    except Exception:
-        logger.exception("Fatal error during dataset generation")
+    except Exception as e:
+        logger.error(f"Download failed: {e}")
         sys.exit(1)
 
 
-def register_data_cli(subparsers: Any) -> None:
-    """Registers the 'data' command group."""
-    # Create 'data' parent command
-    data_parser = subparsers.add_parser("data", help="Data Factory commands")
+def handle_build(args: argparse.Namespace) -> None:
+    """
+    Handles the 'data build' command.
+    Generates (injects/builds) a dataset from a recipe config.
+    """
+    config_path = Path(args.config)
+
+    # 1. Resolve Config Path
+    # If directory provided, look for dataset_config.yaml
+    if config_path.is_dir():
+        potential = config_path / "dataset_config.yaml"
+        if potential.exists():
+            config_path = potential
+        else:
+            logger.error(
+                f"Directory provided but 'dataset_config.yaml' not found in {config_path}"
+            )
+            sys.exit(1)
+
+    if not config_path.exists():
+        logger.error(f"Config file not found: {config_path}")
+        sys.exit(1)
+
+    # 2. Load Config
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            raw_config = yaml.safe_load(f)
+        config = DataFactoryConfig(**raw_config)
+    except Exception as e:
+        logger.error(f"Failed to load config: {e}")
+        sys.exit(1)
+
+    # 3. Determine Dataset Name (CLI override > Config > Folder Name)
+    if args.name:
+        dataset_name = args.name
+        # Update config to match the build name so metadata is consistent
+        config.dataset_name = dataset_name
+    else:
+        dataset_name = config.dataset_name
+
+    target_dir = BUILT_DATASETS_DIR / dataset_name
+
+    # 4. Check Overwrite
+    if target_dir.exists():
+        if not args.overwrite:
+            logger.error(f"Dataset '{dataset_name}' already exists at {target_dir}.")
+            logger.info("Use --overwrite to replace it.")
+            sys.exit(1)
+        else:
+            logger.warning(f"Overwriting existing dataset at {target_dir}...")
+            shutil.rmtree(target_dir)
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # 5. Build Dataset
+    logger.info(f"Building dataset '{dataset_name}' from {config_path}...")
+
+    try:
+        # Note: We default to SquadLoader as it handles the JSON format.
+        # Future loaders (e.g. BIPIA direct loader) can be selected here based on
+        # config if needed.
+        loader = SquadLoader()
+        injector = AttackInjector(config)
+        builder = DatasetBuilder(loader=loader, injector=injector, config=config)
+
+        dataset = builder.build()
+
+        # 6. Save Artifacts
+        output_file = target_dir / "dataset.json"
+        builder.save(dataset, output_file)
+
+        # Save a copy of the config for reproducibility
+        shutil.copy(config_path, target_dir / "dataset_config.yaml")
+
+        logger.info(f"Build successful! Artifacts saved to: {target_dir}")
+
+    except Exception as e:
+        logger.exception(f"Build failed: {e}")
+        # Cleanup partial build
+        if target_dir.exists() and not args.overwrite:
+            shutil.rmtree(target_dir)
+        sys.exit(1)
+
+
+def register_data_commands(subparsers) -> None:
+    """Registers the 'data' subcommand group."""
+    data_parser = subparsers.add_parser("data", help="Data Factory tools")
     data_subs = data_parser.add_subparsers(dest="data_command", required=True)
 
-    # Create 'generate' subcommand
-    gen_parser = data_subs.add_parser(
-        "generate", help="Generate a synthetic RAG dataset from a config file."
+    # --- Download Command ---
+    dl_parser = data_subs.add_parser(
+        "download", help="Fetch raw datasets (SQuAD, BIPIA)"
     )
-    gen_parser.add_argument(
-        "target",
-        type=str,
-        help="Scenario name (e.g. 'canary_naive') or path to config file.",
+    dl_parser.add_argument(
+        "source",
+        choices=["squad", "bipia"],
+        help="Name of the source dataset to download",
     )
-    gen_parser.add_argument(
-        "-o", "--output", type=str, help="Custom output path for the JSON file."
+    dl_parser.add_argument(
+        "--output-dir",
+        help="Override default output directory (workspace/datasets/raw/...)",
     )
-    gen_parser.add_argument(
-        "-f",
-        "--force",
-        action="store_true",
-        help="Overwrite the output file if it exists.",
-    )
+    dl_parser.set_defaults(func=handle_download)
 
-    # Map this command to the handler function
-    gen_parser.set_defaults(func=run_generate_dataset)
+    # --- Build Command ---
+    build_parser = data_subs.add_parser(
+        "build", help="Generate/Inject a dataset from a recipe"
+    )
+    build_parser.add_argument(
+        "config", help="Path to the dataset configuration file (YAML)"
+    )
+    build_parser.add_argument(
+        "--name", help="Name for the built dataset (overrides config name)"
+    )
+    build_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing dataset if it exists",
+    )
+    build_parser.set_defaults(func=handle_build)

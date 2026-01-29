@@ -1,110 +1,100 @@
 import argparse
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from dcv_benchmark.cli.run import run_experiment_command
+from dcv_benchmark.cli.experiments import handle_run
 
 
 @pytest.fixture
 def mock_dependencies():
     with (
-        patch("dcv_benchmark.cli.run.setup_logger") as mock_setup_logger,
-        patch("dcv_benchmark.cli.run.resolve_experiment_paths") as mock_resolve_path,
-        patch("dcv_benchmark.cli.run.load_experiment") as mock_load_exp,
-        patch("dcv_benchmark.cli.run.print_experiment_header") as mock_print_header,
-        patch("dcv_benchmark.cli.run.ensure_dataset_exists") as mock_ensure_data,
-        patch("dcv_benchmark.cli.run.ExperimentRunner") as mock_runner_cls,
-        patch("dcv_benchmark.cli.run.logger") as mock_logger,
-        patch("dcv_benchmark.cli.run.version") as mock_version,
+        patch("dcv_benchmark.cli.experiments.setup_logging") as mock_setup_logger,
+        # patch("dcv_benchmark.cli.experiments.resolve_experiment_paths") as mock_resolve_path,  # Function doesn't seem to exist in experiments.py? experiments.py uses Path(args.config) directly.
+        # patch("dcv_benchmark.cli.experiments.load_experiment") as mock_load_exp, # Config loading is inline in experiments.py
+        # patch("dcv_benchmark.cli.experiments.print_experiment_header") as mock_print_header, # Not used in experiments.py
+        # patch("dcv_benchmark.cli.experiments.ensure_dataset_exists") as mock_ensure_data, # Not used in experiments.py
+        patch("dcv_benchmark.cli.experiments.ExperimentRunner") as mock_runner_cls,
+        patch("dcv_benchmark.cli.experiments.logger") as mock_logger,
+        # patch("dcv_benchmark.cli.experiments.version") as mock_version, # Not used
+        patch("builtins.open"),  # Mock open for config loading
+        patch("yaml.safe_load") as mock_yaml_load,
     ):
         # Setup common mocks
-        mock_resolve_path.return_value = Path("dummy_path/experiment.yaml")
+        # mock_resolve_path.return_value = Path("dummy_path/experiment.yaml")
 
-        # Create a mock experiment config structure
-        # Use a plain Mock or recursive set for complex nested structures
-        # when not strictly testing the model itself
-        mock_config = MagicMock()
-        mock_config.model_dump.return_value = {}
-        mock_config.name = "test_experiment"
+        # Create a mock experiment config structure that matches the dict structure expected by ExperimentConfig
+        mock_exp_dict = {
+            "name": "test_experiment",
+            "version": "1.0.0",
+            "description": "test",
+            "scenario": {"id": "test_scenario"},
+            "target": {
+                "name": "canary",
+                "system_prompt": {"file": "prompts.yaml", "key": "default"},
+                "prompt_template": {"file": "templates.yaml", "key": "default"},
+                "defense": {"required_version": None},
+            },
+            "input": {"dataset_name": "test_dataset"},
+            "evaluator": {"type": "canary"},
+        }
 
-        # Ensure deep structure exists for defense version check
-        mock_config.target.defense.required_version = None
-
-        mock_load_exp.return_value = mock_config
-        mock_version.return_value = "1.0.0"
+        mock_yaml_load.return_value = {"experiment": mock_exp_dict}
 
         yield {
             "setup_logger": mock_setup_logger,
-            "resolve_path": mock_resolve_path,
-            "load_exp": mock_load_exp,
-            "print_header": mock_print_header,
-            "ensure_data": mock_ensure_data,
             "runner_cls": mock_runner_cls,
             "logger": mock_logger,
-            "version": mock_version,
-            "config": mock_config,
+            "yaml_load": mock_yaml_load,
+            "exp_dict": mock_exp_dict,
         }
 
 
-def test_run_experiment_version_match(mock_dependencies):
-    """Test successful run when version matches required version."""
+def test_run_experiment_basic(mock_dependencies):
+    """Test successful run."""
     args = argparse.Namespace(
-        target="canary", debug=False, dry_run=False, limit=None, output_dir=None
+        config="dummy_path/experiment.yaml", debug_traces=False, limit=None
     )
     mocks = mock_dependencies
 
-    # Setup required version to match installed version
-    mocks["config"].target.defense.required_version = "1.0.0"
-    mocks["version"].return_value = "1.0.0"
-
-    run_experiment_command(args)
+    with patch("pathlib.Path.exists", return_value=True):
+        handle_run(args)
 
     # Should proceed to initialize runner
     mocks["runner_cls"].assert_called_once()
     mocks["runner_cls"].return_value.run.assert_called_once()
 
 
-def test_run_experiment_version_mismatch(mock_dependencies):
-    """Test ImportError when version does not match required version."""
+def test_run_experiment_file_not_found(mock_dependencies):
+    """Test exit when config file not found."""
     args = argparse.Namespace(
-        target="canary", debug=False, dry_run=False, limit=None, output_dir=None
+        config="non_existent/experiment.yaml", debug_traces=False, limit=None
     )
     mocks = mock_dependencies
 
-    # Setup mismatch
-    mocks["config"].target.defense.required_version = "2.0.0"
-    mocks["version"].return_value = "1.0.0"
+    with patch("pathlib.Path.exists", return_value=False):
+        with pytest.raises(SystemExit):
+            handle_run(args)
 
-    # The code logs a warning but proceeds with execution.
-    run_experiment_command(args)
-
-    # Verify warning logging
-    mocks["logger"].warning.assert_called()
-    call_args = mocks["logger"].warning.call_args[0][0]
-    assert "Deconvolute version mismatch" in call_args
-
-    # Verify that it proceeded to run the experiment
-    mocks["runner_cls"].assert_called_once()
-    mocks["runner_cls"].return_value.run.assert_called_once()
+    mocks["logger"].error.assert_called_with(
+        "Experiment config file not found: non_existent/experiment.yaml"
+    )
 
 
-def test_run_experiment_no_required_version(mock_dependencies):
-    """Test successful run when no version is required."""
+def test_run_experiment_invalid_config_format(mock_dependencies):
+    """Test exit when config format is invalid (missing 'experiment' key)."""
     args = argparse.Namespace(
-        target="canary", debug=False, dry_run=False, limit=None, output_dir=None
+        config="dummy_path/experiment.yaml", debug_traces=False, limit=None
     )
     mocks = mock_dependencies
 
-    # Setup no required version
-    mocks["config"].target.defense.required_version = None
+    # Setup invalid config
+    mocks["yaml_load"].return_value = {"invalid": "key"}
 
-    run_experiment_command(args)
+    with patch("pathlib.Path.exists", return_value=True):
+        with pytest.raises(SystemExit):
+            handle_run(args)
 
-    # Should not call version() if not required (optional check, but good for
-    # performance)
-    mocks["version"].assert_not_called()
-
-    # Should proceed
-    mocks["runner_cls"].assert_called_once()
+    mocks["logger"].error.assert_called_with(
+        "Invalid config format: Missing top-level 'experiment' key."
+    )
