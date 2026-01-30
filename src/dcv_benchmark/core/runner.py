@@ -9,6 +9,7 @@ from dcv_benchmark.constants import (
     TIMESTAMP_FORMAT,
 )
 from dcv_benchmark.evaluators.base import BaseEvaluator
+from dcv_benchmark.evaluators.bipia import BipiaEvaluator
 from dcv_benchmark.evaluators.canary import CanaryEvaluator
 from dcv_benchmark.evaluators.keyword import KeywordEvaluator
 from dcv_benchmark.evaluators.language import LanguageMismatchEvaluator
@@ -161,6 +162,17 @@ class ExperimentRunner:
             except ImportError as e:
                 logger.error("Missing dependencies for Language Evaluator.")
                 raise e
+        elif eval_config.type == "bipia":
+            logger.info("Evaluator: BIPIA (LLM Judge + Pattern Match)")
+            # TODO: We use the target's LLM as the Judge for simplicity.
+            # Ideally, we might want a separate 'oracle' LLM in the config.
+            judge_llm = getattr(target, "llm", None)
+            if not judge_llm:
+                logger.warning(
+                    "BIPIA Evaluator initialized without an LLM! Text tasks will fail."
+                )
+
+            evaluator = BipiaEvaluator(judge_llm=judge_llm)
         else:
             # Should be caught by Pydantic, but good for safety
             raise ValueError(f"Unknown evaluator type: {eval_config.type}")

@@ -4,11 +4,14 @@ from pathlib import Path
 import yaml
 
 from dcv_benchmark.constants import BUILT_DATASETS_DIR, RAW_DATASETS_DIR
+from dcv_benchmark.data_factory.bipia import BipiaBuilder
 from dcv_benchmark.data_factory.builder import DatasetBuilder
 from dcv_benchmark.data_factory.downloader import download_bipia, download_squad
 from dcv_benchmark.data_factory.injector import AttackInjector
 from dcv_benchmark.data_factory.loaders import SquadLoader
+from dcv_benchmark.models.bipia_config import BipiaConfig
 from dcv_benchmark.models.data_factory import DataFactoryConfig
+from dcv_benchmark.models.dataset import Dataset, DatasetMetadata
 from dcv_benchmark.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -56,67 +59,121 @@ def build_data(
         if potential.exists():
             config_path = potential
         else:
-            logger.error(
-                "Directory provided but 'dataset_config.yaml' not found in "
-                f"{config_path}"
-            )
-            sys.exit(1)
+            # Fallback for BIPIA naming convention if user put it there
+            potential_bipia = config_path / "bipia_config.yaml"
+            if potential_bipia.exists():
+                config_path = potential_bipia
+            else:
+                logger.error(f"No config file found in {config_path}")
+                sys.exit(1)
 
     if not config_path.exists():
         logger.error(f"Config file not found: {config_path}")
         sys.exit(1)
 
-    # Load Config
+    # 1. Load Raw YAML to determine type
     try:
         with open(config_path, encoding="utf-8") as f:
-            raw_config = yaml.safe_load(f)
-        config = DataFactoryConfig(**raw_config)
+            raw_yaml = yaml.safe_load(f)
     except Exception as e:
-        logger.error(f"Failed to load config: {e}")
+        logger.error(f"Failed to parse YAML: {e}")
         sys.exit(1)
 
-    # Determine Dataset Name (CLI override > Config > Folder Name)
-    if name:
-        dataset_name = name
-        # Update config to match the build name so metadata is consistent
-        config.dataset_name = dataset_name
+    # 2. Branch Logic
+    is_bipia = "tasks" in raw_yaml  # 'tasks' is unique to BipiaConfig
+
+    if is_bipia:
+        _build_bipia(raw_yaml, name, overwrite)
     else:
-        dataset_name = config.dataset_name
+        _build_standard(raw_yaml, name, overwrite)
 
+
+def _build_bipia(raw_config: dict, name: str | None, overwrite: bool) -> None:
+    """Handler for BIPIA datasets."""
+    try:
+        config = BipiaConfig(**raw_config)
+    except Exception as e:
+        logger.error(f"Invalid BIPIA config: {e}")
+        sys.exit(1)
+
+    dataset_name = name or config.dataset_name
     target_dir = BUILT_DATASETS_DIR / dataset_name
-
     target_dir.mkdir(parents=True, exist_ok=True)
     output_file = target_dir / "dataset.json"
 
-    # Check Overwrite
-    if output_file.exists():
-        if not overwrite:
-            logger.error(f"Dataset artifact '{output_file}' already exists.")
-            logger.info("Use --overwrite to replace it.")
-            sys.exit(1)
-        else:
-            logger.warning(f"Overwriting existing dataset artifact at {output_file}...")
-            output_file.unlink()
+    if output_file.exists() and not overwrite:
+        logger.error(f"Dataset '{output_file}' exists. Use --overwrite.")
+        sys.exit(1)
 
-    # Build Dataset
-    logger.info(f"Building dataset '{dataset_name}' from {config_path}...")
+    logger.info(f"Building BIPIA dataset '{dataset_name}'...")
 
     try:
-        # Note: We default to SquadLoader as it handles the JSON format.
+        # Initialize Builder
+        builder = BipiaBuilder(raw_dir=RAW_DATASETS_DIR / "bipia", seed=config.seed)
+
+        # Build Samples
+        raw_samples = builder.build(
+            tasks=config.tasks,
+            injection_pos=config.injection_pos,
+            max_samples=config.max_samples,
+        )
+
+        # Wrap in Standard Dataset Object for compatibility with Runner
+        dataset = Dataset(
+            meta=DatasetMetadata(
+                name=dataset_name,
+                version="1.0.0",
+                description=f"BIPIA Benchmark (Tasks: {config.tasks}, Pos: {config.injection_pos})",
+                author="Deconvolute / Microsoft BIPIA",
+            ),
+            samples=raw_samples,
+        )
+
+        # Save
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(dataset.model_dump_json(indent=2))
+
+        logger.info(
+            f"Build successful! Saved {len(raw_samples)} samples to: {output_file}"
+        )
+        # Save config copy for reproducibility
+        with open(target_dir / "bipia_config.yaml", "w", encoding="utf-8") as f:
+            yaml.dump(raw_config, f)
+
+    except Exception as e:
+        logger.exception(f"BIPIA Build failed: {e}")
+        sys.exit(1)
+
+
+# TODO: REname to squad dataest
+def _build_standard(raw_config: dict, name: str | None, overwrite: bool) -> None:
+    """Handler for Standard (SQuAD/Canary) datasets."""
+    try:
+        config = DataFactoryConfig(**raw_config)
+    except Exception as e:
+        logger.error(f"Invalid Standard config: {e}")
+        sys.exit(1)
+
+    dataset_name = name or config.dataset_name
+    target_dir = BUILT_DATASETS_DIR / dataset_name
+    target_dir.mkdir(parents=True, exist_ok=True)
+    output_file = target_dir / "dataset.json"
+
+    if output_file.exists() and not overwrite:
+        logger.error(f"Dataset '{output_file}' exists. Use --overwrite.")
+        sys.exit(1)
+
+    logger.info(f"Building Standard dataset '{dataset_name}'...")
+
+    try:
         loader = SquadLoader()
         injector = AttackInjector(config)
         builder = DatasetBuilder(loader=loader, injector=injector, config=config)
-
         dataset = builder.build()
-
-        # Save Artifacts
         builder.save(dataset, output_file)
 
         logger.info(f"Build successful! Artifacts saved to: {target_dir}")
 
     except Exception as e:
-        logger.exception(f"Build failed: {e}")
-        # Cleanup partial build
-        if output_file.exists() and not overwrite:
-            output_file.unlink()
+        logger.exception(f"Standard Build failed: {e}")
         sys.exit(1)

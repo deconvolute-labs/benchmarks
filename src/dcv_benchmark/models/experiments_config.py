@@ -57,7 +57,7 @@ class DefenseConfig(BaseModel):
 
 
 class EvaluatorConfig(BaseModel):
-    type: Literal["canary", "keyword", "language_mismatch"] = Field(
+    type: Literal["canary", "keyword", "language_mismatch", "bipia"] = Field(
         ..., description="Type of evaluator to use."
     )
     # For language_mismatch
