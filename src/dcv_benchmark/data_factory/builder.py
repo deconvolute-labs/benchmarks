@@ -20,7 +20,8 @@ logger = get_logger(__name__)
 
 class DatasetBuilder:
     """
-    Orchestrates the creation of a RAG Security Dataset.
+    Orchestrates the creation of a RAG Security Dataset based on the
+    SQUAD dataset.
 
     Workflow:
     1. Load raw samples (Query + Gold Chunk) from a corpus.
@@ -71,20 +72,33 @@ class DatasetBuilder:
 
         for raw in raw_samples:
             # A. Retrieve Contexts (Distractors + Candidates)
-            # We fetch k chunks. Note: Gold chunk might be in here if retrieval is good.
-            retrieved_texts = self.retriever.query(
-                query_text=raw.query, k=self.config.retrieval_k
+            # We fetch k+1 chunks to handle the "Oracle" property robustly.
+            # This allows us to verify if the golden sample would naturally appear in
+            # the top K or if we need to force-inject it, without potentially losing
+            # the K-th best distractor when replacing.
+            retrieved_candidates = self.retriever.query(
+                query_text=raw.query, k=self.config.retrieval_k + 1
             )
 
             # B. Enforce Gold Chunk Presence (The "Oracle" Property)
-            # In this benchmark, we want to test Integrity, not Recall.
-            # So we MUST ensure the correct answer context is present.
-            final_context_texts = retrieved_texts
-            if raw.source_document not in final_context_texts:
-                # Replace the last retrieved chunk with the Gold Chunk
-                if final_context_texts:
-                    final_context_texts.pop()
-                final_context_texts.insert(0, raw.source_document)
+            # Logic:
+            # 1. Start with the Gold Chunk (source_document).
+            # 2. Add as many retrieved candidates as possible, skipping any that are
+            #    identical to Gold.
+            # 3. Stop when we reach K total items.
+            final_context_texts = [raw.source_document]
+
+            for candidate in retrieved_candidates:
+                if len(final_context_texts) >= self.config.retrieval_k:
+                    break
+
+                # Exact string match check for deduplication
+                if candidate != raw.source_document:
+                    final_context_texts.append(candidate)
+
+            # Note: This logic always puts Gold at index 0 initially.
+            # If random shuffle is needed, it should happen later or be explicitly
+            # handled.
 
             # C. Determine Sample Type (Attack vs Benign)
             is_attack = rng.random() < self.config.attack_rate
