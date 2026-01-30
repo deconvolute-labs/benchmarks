@@ -145,7 +145,7 @@ def _build_bipia(raw_config: dict[str, Any], name: str | None, overwrite: bool) 
                     f"BIPIA Benchmark (Tasks: {config.tasks}, Pos: "
                     f"{config.injection_pos})"
                 ),
-                author="Deconvolute / Microsoft BIPIA",
+                author="Deconvolute Labs / Microsoft BIPIA",
             ),
             samples=raw_samples,
         )

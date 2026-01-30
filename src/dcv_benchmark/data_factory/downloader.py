@@ -52,8 +52,8 @@ def download_bipia(output_dir: Path) -> None:
         "benchmark/code/test.jsonl": "test_code.jsonl",  # Code QA
         # We have to skip this for now due to licensing issues which don't seem allow
         # this to be hosted by BIPIA directly.
-        # "benchmark/table/test.jsonl": "test_table.jsonl",  # Table QA
-        "benchmark/qa/index.json": "test_qa.json",  # Web QA
+        "benchmark/table/test.jsonl": "test_table.jsonl",  # Table QA
+        # "benchmark/qa/index.json": "test_qa.json",  # Web QA
         "benchmark/text_attack_test.json": "attacks_text.json",
         "benchmark/code_attack_test.json": "attacks_code.json",
     }
