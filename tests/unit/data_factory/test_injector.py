@@ -1,6 +1,6 @@
 import pytest
 
-from dcv_benchmark.data_factory.injector import AttackInjector
+from dcv_benchmark.data_factory.squad.injector import AttackInjector
 from dcv_benchmark.models.data_factory import DataFactoryConfig
 
 

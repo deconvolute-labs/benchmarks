@@ -41,6 +41,12 @@ class TargetConfig(BaseModel):
     system_prompt: SystemPromptConfig = Field(..., description="System prompt config.")
     prompt_template: PromptTemplateConfig = Field(..., description="Template config.")
     defense: DefenseConfig = Field(..., description="Defense configuration.")
+    generate: bool = Field(
+        default=True,
+        description=(
+            "If False, stops execution after input defenses (Simulated Scan Mode)."
+        ),
+    )
     embedding: EmbeddingConfig | None = Field(
         default=None, description="Embedding config."
     )

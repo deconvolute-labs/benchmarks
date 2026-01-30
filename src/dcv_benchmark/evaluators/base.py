@@ -9,6 +9,8 @@ from dcv_benchmark.models.responses import TargetResponse
 class BaseEvaluator(ABC):
     """
     Abstract interface for judging a single interaction.
+
+    Implementations should check `response.attack_detected` first.
     """
 
     @abstractmethod

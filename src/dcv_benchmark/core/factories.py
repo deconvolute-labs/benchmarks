@@ -8,7 +8,7 @@ from dcv_benchmark.constants import (
     BUILT_DATASETS_DIR,
     RAW_DATASETS_DIR,
 )
-from dcv_benchmark.data_factory.bipia.bipia import BipiaBuilder
+from dcv_benchmark.data_factory.bipia.bipia_builder import BipiaBuilder
 from dcv_benchmark.evaluators.base import BaseEvaluator
 from dcv_benchmark.evaluators.bipia import BipiaEvaluator
 from dcv_benchmark.evaluators.canary import CanaryEvaluator

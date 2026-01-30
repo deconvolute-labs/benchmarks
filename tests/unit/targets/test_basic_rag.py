@@ -21,6 +21,9 @@ def mock_config():
     config.defense.yara = None
     config.defense.ml_scanner = None
 
+    # Default generate to True (Normal Mode)
+    config.generate = True
+
     # Mock system_prompt and prompt_template as objects with path/key
     config.prompt_template = MagicMock()
     config.prompt_template.file = "template_path.yaml"

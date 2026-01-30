@@ -173,16 +173,49 @@ class BasicRAG(BaseTarget):
         context_chunks = []
 
         if forced_context is not None:
+            # If we have a Signature Detector (YARA/Scanner),
+            # we check the raw docs here.
+            if self.signature_detector:
+                for chunk in forced_context:
+                    scan_result = self.signature_detector.check(chunk)
+
+                    if scan_result.threat_detected:
+                        # HIT: Threat detected on raw document.
+                        # We STOP here. No LLM call.
+                        logger.info(
+                            "Scan Defense triggered on raw context: "
+                            f"{scan_result.metadata}"
+                        )
+                        return TargetResponse(
+                            content="[Blocked by Signature Scan]",
+                            raw_content=None,
+                            used_context=forced_context,
+                            attack_detected=True,
+                            detection_reason=(
+                                f"Signature Scan: "
+                                f"{getattr(scan_result, 'metadata', 'Threat')}"
+                            ),
+                            metadata={"stage": "ingestion_scan"},
+                        )
+
+            # If we get here, the Scan missed (or no scanner enabled).
             context_chunks = forced_context
-            logger.debug("Using forced context.")
+            logger.debug("Using forced context (Simulated Ingestion).")
         elif self.vector_store:
             context_chunks = self.vector_store.search(user_query)
             logger.debug(f"Retrieved {len(context_chunks)} chunks.")
 
-        # For Retriever only testing
-        if retrieve_only:
+        # 2. Check Generation Flag (The "Scan Mode" Support)
+        # If the user configured generate=False, we stop here.
+        # This covers the "Miss" case where we don't want to waste tokens on the LLM.
+        if not self.config.generate or retrieve_only:
             return TargetResponse(
-                content="", raw_content=None, used_context=context_chunks
+                content="",  # Empty content
+                raw_content=None,
+                used_context=context_chunks,
+                attack_detected=False,  # We scanned, but found nothing
+                detection_reason=None,
+                metadata={"stage": "ingestion_scan", "skipped_generation": True},
             )
 
         # Defense: Canary injection (input side)

@@ -5,12 +5,12 @@ from typing import Any
 import yaml
 
 from dcv_benchmark.constants import BUILT_DATASETS_DIR, RAW_DATASETS_DIR
-from dcv_benchmark.data_factory.bipia.bipia import BipiaBuilder
+from dcv_benchmark.data_factory.bipia.bipia_builder import BipiaBuilder
 from dcv_benchmark.data_factory.downloader import download_bipia, download_squad
-from dcv_benchmark.data_factory.injector import AttackInjector
 from dcv_benchmark.data_factory.loaders import SquadLoader
+from dcv_benchmark.data_factory.squad.injector import AttackInjector
 from dcv_benchmark.data_factory.squad.squad_builder import SquadBuilder
-from dcv_benchmark.models.bipia_config import BipiaConfig
+from dcv_benchmark.models.config.bipia import BipiaConfig
 from dcv_benchmark.models.data_factory import DataFactoryConfig
 from dcv_benchmark.models.dataset import (
     BipiaDataset,

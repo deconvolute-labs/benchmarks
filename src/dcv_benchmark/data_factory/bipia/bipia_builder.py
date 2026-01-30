@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from dcv_benchmark.data_factory.base import BaseDatasetBuilder
 from dcv_benchmark.data_factory.bipia.bipia_templates import TASK_CONFIGS
-from dcv_benchmark.data_factory.injector import BipiaInjector
+from dcv_benchmark.data_factory.bipia.injector import BipiaInjector
 from dcv_benchmark.models.dataset import BenchmarkSample, ContextChunk
 
 logger = logging.getLogger(__name__)
