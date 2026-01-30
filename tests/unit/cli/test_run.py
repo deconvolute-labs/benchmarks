@@ -3,17 +3,23 @@ from unittest.mock import patch
 
 import pytest
 
-from dcv_benchmark.cli.experiments import handle_run
+from dcv_benchmark.cli.commands.experiment import handle_run
 
 
 @pytest.fixture
 def mock_dependencies():
     with (
         patch("dcv_benchmark.cli.experiments.setup_logging") as mock_setup_logger,
-        # patch("dcv_benchmark.cli.experiments.resolve_experiment_paths") as mock_resolve_path,  # Function doesn't seem to exist in experiments.py? experiments.py uses Path(args.config) directly.
-        # patch("dcv_benchmark.cli.experiments.load_experiment") as mock_load_exp, # Config loading is inline in experiments.py
-        # patch("dcv_benchmark.cli.experiments.print_experiment_header") as mock_print_header, # Not used in experiments.py
-        # patch("dcv_benchmark.cli.experiments.ensure_dataset_exists") as mock_ensure_data, # Not used in experiments.py
+        # patch("dcv_benchmark.cli.experiments.resolve_experiment_paths") as
+        # mock_resolve_path,
+        # Function doesn't seem to exist in experiments.py?
+        # experiments.py uses Path(args.config) directly.
+        # patch("dcv_benchmark.cli.experiments.load_experiment") as mock_load_exp,
+        # Config loading is inline in experiments.py
+        # patch("dcv_benchmark.cli.experiments.print_experiment_header") as
+        # mock_print_header,  # Not used in experiments.py
+        # patch("dcv_benchmark.cli.experiments.ensure_dataset_exists") as
+        # mock_ensure_data,  # Not used in experiments.py
         patch("dcv_benchmark.cli.experiments.ExperimentRunner") as mock_runner_cls,
         patch("dcv_benchmark.cli.experiments.logger") as mock_logger,
         # patch("dcv_benchmark.cli.experiments.version") as mock_version, # Not used
@@ -23,7 +29,8 @@ def mock_dependencies():
         # Setup common mocks
         # mock_resolve_path.return_value = Path("dummy_path/experiment.yaml")
 
-        # Create a mock experiment config structure that matches the dict structure expected by ExperimentConfig
+        # Create a mock experiment config structure that matches
+        # the dict structure expected by ExperimentConfig
         mock_exp_dict = {
             "name": "test_experiment",
             "version": "1.0.0",

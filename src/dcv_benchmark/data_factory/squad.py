@@ -5,7 +5,7 @@ from pathlib import Path
 
 # We allow this to fail gracefully if the optional 'data' dependencies aren't installed
 try:
-    from datasets import load_dataset  # type: ignore
+    from datasets import load_dataset
     from tqdm import tqdm
 except ImportError:
     load_dataset = None
@@ -37,14 +37,16 @@ def fetch_squad_subset(output_dir: Path, count: int = 300, seed: int = 42) -> No
     # Convert to list to shuffle
     all_samples = list(dataset)
     logger.info(
-        f"Loaded {len(all_samples)} total samples. Shuffling with seed {seed}..."
+        f"Loaded {len(all_samples)} total samples. Shuffling with seed {seed} ..."
     )
 
-    # Shuffle to mix topics
+    # Shuffle to mix topics (Biology, History, Sports, etc.)
     random.seed(seed)
     random.shuffle(all_samples)
 
-    clean_samples = []
+    from typing import Any
+
+    clean_samples: list[dict[str, Any]] = []
     seen_contexts = set()
 
     # Select samples, preferring UNIQUE contexts to maximize diversity
@@ -69,6 +71,7 @@ def fetch_squad_subset(output_dir: Path, count: int = 300, seed: int = 42) -> No
                 "reference_answer": row["answers"]["text"][0]
                 if row["answers"]["text"]
                 else None,
+                # In our pipeline, this Context becomes the "Gold Chunk"
                 "source_document": context,
                 "title": row["title"],
             }

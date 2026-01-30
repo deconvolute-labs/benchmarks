@@ -5,6 +5,26 @@ from typing import Any
 from deconvolute import __version__ as dcv_version
 
 
+class CustomFormatter(logging.Formatter):
+    """
+    Formatter that shows the logger name only in DEBUG mode.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.debug_formatter = logging.Formatter(
+            "[%(levelname)s] %(asctime)s %(name)s %(message)s", datefmt="%H:%M:%S"
+        )
+        self.default_formatter = logging.Formatter(
+            "[%(levelname)s] %(asctime)s %(message)s", datefmt="%H:%M:%S"
+        )
+
+    def format(self, record: logging.LogRecord) -> str:
+        if record.levelno == logging.DEBUG:
+            return self.debug_formatter.format(record)
+        return self.default_formatter.format(record)
+
+
 def setup_logging(level: str | int = "INFO") -> None:
     """
     Configures the root logger.
@@ -17,12 +37,14 @@ def setup_logging(level: str | int = "INFO") -> None:
     if isinstance(level, str):
         level = level.upper()
 
+    # Create handler with custom formatter
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(CustomFormatter())
+
     # Basic configuration for the root logger
     logging.basicConfig(
         level=level,
-        format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-        datefmt="%H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout)],
+        handlers=[handler],
         force=True,  # Overwrite any existing config (useful for testing/notebooks)
     )
 

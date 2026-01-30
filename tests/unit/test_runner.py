@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dcv_benchmark.constants import BASELINE_TARGET_KEYWORD
+from dcv_benchmark.core.runner import ExperimentRunner
 from dcv_benchmark.models.experiments_config import (
     CanaryConfig,
     DefenseConfig,
@@ -12,12 +13,11 @@ from dcv_benchmark.models.experiments_config import (
     ScenarioConfig,
     TargetConfig,
 )
-from dcv_benchmark.runner import ExperimentRunner
 
 
 @pytest.fixture
 def mock_dataset_loader():
-    with patch("dcv_benchmark.runner.DatasetLoader") as loader:
+    with patch("dcv_benchmark.core.runner.DatasetLoader") as loader:
         mock_ds = MagicMock()
         mock_ds.samples = [MagicMock(id=f"s{i}") for i in range(5)]
         mock_ds.meta.attack_info.payload = (
@@ -50,17 +50,17 @@ def valid_config():
     )
 
 
-def test_init_creates_dir(tmp_path):
+def test_init_does_not_create_dir(tmp_path):
     output_dir = tmp_path / "custom_results"
     _ = ExperimentRunner(output_dir=output_dir)
-    assert output_dir.exists()
+    assert not output_dir.exists()
 
 
 def test_run_missing_dataset_path(valid_config, tmp_path):
     runner = ExperimentRunner(output_dir=tmp_path)
     valid_config.input.dataset_name = None
 
-    with pytest.raises(ValueError, match="Cannot find dataset name in config"):
+    with pytest.raises(ValueError, match="No dataset path provided"):
         runner.run(valid_config)
 
 
@@ -69,8 +69,8 @@ def test_run_missing_evaluator(valid_config, tmp_path):
     valid_config.evaluator = None
 
     with (
-        patch("dcv_benchmark.runner.DatasetLoader"),
-        patch("dcv_benchmark.runner.BasicRAG"),
+        patch("dcv_benchmark.core.runner.DatasetLoader"),
+        patch("dcv_benchmark.core.runner.BasicRAG"),
     ):
         with pytest.raises(ValueError, match="No evaluator specified"):
             runner.run(valid_config)
@@ -89,9 +89,9 @@ def test_validate_baseline_payload_mismatch(tmp_path):
         runner._validate_baseline_payload(mock_dataset)
 
 
-@patch("dcv_benchmark.runner.BasicRAG")
-@patch("dcv_benchmark.runner.KeywordEvaluator")
-@patch("dcv_benchmark.runner.ReportGenerator")
+@patch("dcv_benchmark.core.runner.BasicRAG")
+@patch("dcv_benchmark.core.runner.KeywordEvaluator")
+@patch("dcv_benchmark.core.runner.ReportGenerator")
 def test_run_with_limit(
     MockReport, MockKeyword, MockRAG, mock_dataset_loader, valid_config, tmp_path
 ):
@@ -106,9 +106,9 @@ def test_run_with_limit(
     assert MockRAG.return_value.invoke.call_count == 2
 
 
-@patch("dcv_benchmark.runner.BasicRAG")
-@patch("dcv_benchmark.runner.KeywordEvaluator")
-@patch("dcv_benchmark.runner.ReportGenerator")
+@patch("dcv_benchmark.core.runner.BasicRAG")
+@patch("dcv_benchmark.core.runner.KeywordEvaluator")
+@patch("dcv_benchmark.core.runner.ReportGenerator")
 def test_run_handles_exception_single_sample(
     MockReport, MockKeyword, MockRAG, mock_dataset_loader, valid_config, tmp_path
 ):

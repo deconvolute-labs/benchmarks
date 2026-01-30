@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dcv_benchmark.cli.data import handle_build, handle_download
+from dcv_benchmark.cli.commands.data import handle_build, handle_download
 
 
 @pytest.fixture
@@ -14,7 +14,6 @@ def mock_data_dependencies():
         patch("dcv_benchmark.cli.data.DatasetBuilder") as mock_builder_cls,
         patch("dcv_benchmark.cli.data.AttackInjector") as mock_injector,
         patch("dcv_benchmark.cli.data.SquadLoader") as mock_loader,
-        patch("dcv_benchmark.cli.data.shutil") as mock_shutil,
         patch("dcv_benchmark.cli.data.logger") as mock_logger,
         patch("builtins.open"),
         patch("yaml.safe_load") as mock_yaml_load,
@@ -25,7 +24,6 @@ def mock_data_dependencies():
             "builder_cls": mock_builder_cls,
             "injector": mock_injector,
             "loader": mock_loader,
-            "shutil": mock_shutil,
             "logger": mock_logger,
             "yaml_load": mock_yaml_load,
         }
@@ -52,8 +50,9 @@ def test_handle_download_bipia(mock_data_dependencies):
 
     mocks["dl_bipia"].assert_called_once()
     mocks["dl_squad"].assert_not_called()
-    # verify output dir was passed (logic is inside function, but we can check calls if we mocked Path,
-    # but primarily we just want to ensure the right downloader is called)
+    # verify output dir was passed (logic is inside function, but we can check
+    # calls if we mocked Path, but primarily we just want to ensure the right
+    # downloader is called)
 
 
 def test_handle_download_unknown(mock_data_dependencies):
@@ -89,22 +88,22 @@ def test_handle_build_success(mock_data_dependencies):
         patch("pathlib.Path.exists") as mock_exists,
         patch("pathlib.Path.is_dir", return_value=False),
         patch("pathlib.Path.mkdir"),
+        # We need to mock unlink for cleanup if it were called (it shouldn't be here)
+        patch("pathlib.Path.unlink"),
     ):
-        # 1. Config exists
-        # 2. Target dir does NOT exist (so no overwrite check needed)
-        def exists_side_effect():
-            # First check: config path exists -> True
-            yield True
-            # Second check: target dir exists -> False
-            yield False
-
-        mock_exists.side_effect = exists_side_effect()
+        # 1. Config exists -> True
+        # 2. Output file exists -> False
+        mock_exists.side_effect = [True, False]
 
         handle_build(args)
 
     mocks["builder_cls"].assert_called_once()
     mocks["builder_cls"].return_value.build.assert_called_once()
     mocks["builder_cls"].return_value.save.assert_called_once()
+
+    # Ensure config was NOT copied
+    # mock_shutil is no longer available, nor used.
+    pass
 
 
 def test_handle_build_overwrite_denied(mock_data_dependencies):
@@ -122,11 +121,14 @@ def test_handle_build_overwrite_denied(mock_data_dependencies):
     with (
         patch("pathlib.Path.exists", return_value=True),
         patch("pathlib.Path.is_dir", return_value=False),
+        patch("pathlib.Path.mkdir"),
     ):
         with pytest.raises(SystemExit):
             handle_build(args)
 
     mocks["logger"].error.assert_called()
+    # Check for updated error message
+    assert "Dataset artifact" in mocks["logger"].error.call_args[0][0]
     assert "already exists" in mocks["logger"].error.call_args[0][0]
 
 
@@ -146,10 +148,12 @@ def test_handle_build_overwrite_allowed(mock_data_dependencies):
         patch("pathlib.Path.exists", return_value=True),
         patch("pathlib.Path.is_dir", return_value=False),
         patch("pathlib.Path.mkdir"),
+        patch("pathlib.Path.unlink") as mock_unlink,
     ):
         handle_build(args)
 
-    # Should have called rmtree
-    mocks["shutil"].rmtree.assert_called_once()
+    # Should have called unlink (not rmtree anymore)
+    mock_unlink.assert_called()
+
     # Should proceed to build
     mocks["builder_cls"].assert_called_once()

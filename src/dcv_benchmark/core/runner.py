@@ -28,7 +28,6 @@ logger = get_logger(__name__)
 class ExperimentRunner:
     def __init__(self, output_dir: str | Path = "results"):
         self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def _validate_baseline_payload(self, dataset: Dataset) -> None:
         """Helper to validate dataset payload for Keyword evaluation."""
@@ -54,7 +53,10 @@ class ExperimentRunner:
         )
 
     def run(
-        self, experiment_config: ExperimentConfig, limit: int | None = None
+        self,
+        experiment_config: ExperimentConfig,
+        limit: int | None = None,
+        debug_traces: bool = False,
     ) -> Path:
         """
         Executes the experiment loop.
@@ -63,6 +65,8 @@ class ExperimentRunner:
         Args:
             experiment_config: The experiment configuration data.
             limit: Optional integer to limit the number of samples to process.
+            debug_traces: If True, include full content (query, context, response)
+                in traces.
 
         Returns:
             The path to the dir which contains the results.
@@ -72,17 +76,36 @@ class ExperimentRunner:
         # Setup run directory
         run_id = start_time.strftime(TIMESTAMP_FORMAT)
         run_dir = self.output_dir / f"run_{run_id}"
-        run_dir.mkdir()
+        # Defer directory creation until we are ready to write results
+        # run_dir.mkdir()
 
         logger.info(f"Starting Run: {run_id}")
 
         # Initialize components
         # We assume the dataset path is relative to the project root
-        logger.info("Initializing components...")
+        logger.info("Initializing components ...")
 
-        if not experiment_config.input.dataset_name:
-            raise ValueError("Cannot find dataset name in config!")
-        dataset: Dataset = DatasetLoader(experiment_config.input.dataset_name).load()
+        dataset_path_or_name = experiment_config.input.dataset_name
+        if not dataset_path_or_name:
+            # Fallback to default path:
+            # workspace/datasets/built/{config.name}/dataset.json
+            from dcv_benchmark.constants import BUILT_DATASETS_DIR
+
+            fallback_path = BUILT_DATASETS_DIR / experiment_config.name / "dataset.json"
+            if not fallback_path.exists():
+                error_msg = (
+                    "No dataset path provided and default path not found: "
+                    f"{fallback_path}\n"
+                    "Please provide 'input.dataset_name' in config or ensure the "
+                    "default dataset exists."
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+
+            logger.info(f"No dataset provided. Using default path: {fallback_path}")
+            dataset_path_or_name = str(fallback_path)
+
+        dataset: Dataset = DatasetLoader(dataset_path_or_name).load()
 
         logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
         logger.info(f"Description: {dataset.meta.description}")
@@ -145,6 +168,9 @@ class ExperimentRunner:
             raise ValueError(f"Unknown evaluator type: {eval_config.type}")
 
         # Prepare output file
+        if not run_dir.exists():
+            run_dir.mkdir(parents=True, exist_ok=True)
+
         traces_path = run_dir / "traces.jsonl"
         logger.info(f"Dataset: {len(dataset.samples)} samples. Output: {traces_path}")
 
@@ -217,11 +243,17 @@ class ExperimentRunner:
                         sample_id=sample.id,
                         sample_type=sample.sample_type,
                         attack_strategy=sample.attack_strategy,
-                        user_query=sample.query,
+                        user_query=sample.query if debug_traces else None,
                         response=response,
                         evaluation=eval_result,
                         latency_seconds=latency,
                     )
+
+                    if not debug_traces:
+                        # Clear sensitive/bulky content from trace
+                        trace.response.content = None
+                        trace.response.raw_content = None
+                        trace.response.used_context = []
 
                     f.write(trace.model_dump_json() + "\n")
                     f.flush()

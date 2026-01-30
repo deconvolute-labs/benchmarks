@@ -1,22 +1,22 @@
-import argparse
 import sys
 from pathlib import Path
 
 import yaml
 
+from dcv_benchmark.core.runner import ExperimentRunner
 from dcv_benchmark.models.experiments_config import ExperimentConfig
-from dcv_benchmark.runner import ExperimentRunner
 from dcv_benchmark.utils.logger import get_logger, setup_logging
 
 logger = get_logger(__name__)
 
 
-def handle_run(args: argparse.Namespace) -> None:
+def run_experiment(
+    config_path_str: str, limit: int | None = None, debug_traces: bool = False
+) -> None:
     """
-    Handles the 'experiment run' command.
     Loads the config, validates it, and triggers the runner.
     """
-    config_path = Path(args.config)
+    config_path = Path(config_path_str)
     if not config_path.exists():
         logger.error(f"Experiment config file not found: {config_path}")
         sys.exit(1)
@@ -38,7 +38,10 @@ def handle_run(args: argparse.Namespace) -> None:
 
     # 2. Setup Logging
     # If the user requested debug traces, we might want to adjust log levels
-    if args.debug_traces:
+    if debug_traces:
+        # Note: calling setup_logging here might override global settings.
+        # But if the user passed --debug-traces specific to this command,
+        # it makes sense.
         setup_logging("DEBUG")
         logger.debug("Debug traces enabled.")
 
@@ -51,30 +54,7 @@ def handle_run(args: argparse.Namespace) -> None:
 
     try:
         # 4. Execute
-        runner.run(exp_config, limit=args.limit)
+        runner.run(exp_config, limit=limit, debug_traces=debug_traces)
     except Exception as e:
         logger.exception(f"Experiment failed: {e}")
         sys.exit(1)
-
-
-def register_experiment_commands(subparsers) -> None:
-    """Registers the 'experiment' subcommand group."""
-    exp_parser = subparsers.add_parser("experiment", help="Experiment execution tools")
-    exp_subs = exp_parser.add_subparsers(dest="experiment_command", required=True)
-
-    # Run Command
-    run_parser = exp_subs.add_parser(
-        "run", help="Execute an experiment from a config file"
-    )
-    run_parser.add_argument(
-        "config", help="Path to the experiment.yaml configuration file"
-    )
-    run_parser.add_argument(
-        "--limit", type=int, help="Limit execution to N samples (for debugging)"
-    )
-    run_parser.add_argument(
-        "--debug-traces",
-        action="store_true",
-        help="Enable verbose logging and full-text traces",
-    )
-    run_parser.set_defaults(func=handle_run)
