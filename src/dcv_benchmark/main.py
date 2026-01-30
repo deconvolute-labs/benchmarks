@@ -8,15 +8,12 @@ from dcv_benchmark.utils.logger import setup_logging
 
 def main() -> None:
     # Create a parent parser for global arguments
-    # This parser is NOT used to parse the final args directly, but to be inherited.
-    # add_help=False is crucial for parent parsers to avoid conflict with -h/--help
-    # in children.
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument(
         "--debug", action="store_true", help="Enable debug logging globally."
     )
 
-    # 2. Setup the main parser
+    # Setup the main parser
     parser = argparse.ArgumentParser(
         prog="dcv-benchmark",
         description=(
@@ -27,7 +24,7 @@ def main() -> None:
         parents=[parent_parser],  # Allow --debug at root level too
     )
 
-    # Create subparsers for the top-level commands (data, experiment)
+    # Create subparsers for the top-level commands
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Register modules, passing the parent_parser to inherit flags
@@ -38,9 +35,6 @@ def main() -> None:
     args = parser.parse_args()
 
     # Setup logging based on the parsed debug flag
-    # Since --debug is in the parent parser, it should be available in args regardless
-    # of where it was placed
-    # (as long as the subparser inherited it).
     setup_logging(level="DEBUG" if args.debug else "INFO")
 
     # Execute the mapped function

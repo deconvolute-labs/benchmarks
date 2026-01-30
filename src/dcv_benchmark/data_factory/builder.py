@@ -60,7 +60,7 @@ class DatasetBuilder:
 
         self.retriever.index(documents=kb_docs, ids=kb_ids)
 
-        # 3. Generate Samples
+        # Generate Samples
         benchmark_samples = []
         attack_count = 0
 

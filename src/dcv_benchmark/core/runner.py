@@ -76,8 +76,6 @@ class ExperimentRunner:
         # Setup run directory
         run_id = start_time.strftime(TIMESTAMP_FORMAT)
         run_dir = self.output_dir / f"run_{run_id}"
-        # Defer directory creation until we are ready to write results
-        # run_dir.mkdir()
 
         logger.info(f"Starting Run: {run_id}")
 

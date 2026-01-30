@@ -3,7 +3,6 @@ from pathlib import Path
 
 import httpx
 
-# Import the logic from the new squad module
 from dcv_benchmark.data_factory.squad import fetch_squad_subset
 
 logger = logging.getLogger(__name__)
@@ -31,12 +30,11 @@ def _download_file(url: str, destination: Path) -> None:
 def download_squad(output_dir: Path) -> None:
     """
     Downloads and processes the SQuAD subset.
+    Currently downloads 300 samples.
     Uses the 'datasets' library logic defined in squad.py.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # We use the default 300 count from your script
-    # This will generate 'squad_subset_300.json' in the output_dir
     logger.info("Starting SQuAD processing (HuggingFace datasets)...")
     fetch_squad_subset(output_dir, count=300)
 

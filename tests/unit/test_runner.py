@@ -83,8 +83,6 @@ def test_validate_baseline_payload_mismatch(tmp_path):
     mock_dataset = MagicMock()
     mock_dataset.meta.attack_info.payload = "innocent text"
 
-    # We temporarily rely on the private helper logic or integration flow
-    # Easier to call private method directly for unit testing logic
     with pytest.raises(ValueError, match="Configuration Mismatch"):
         runner._validate_baseline_payload(mock_dataset)
 

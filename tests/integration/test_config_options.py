@@ -5,8 +5,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from dcv_benchmark.core.runner import ExperimentRunner
-
-# Corrected import from DatasetSample to BenchmarkSample
 from dcv_benchmark.models.dataset import (
     AttackInfo,
     BenchmarkSample,
@@ -48,7 +46,7 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
     Test that the runner falls back to workspace/datasets/built/{name}/dataset.json
     if input.dataset_name is missing.
     """
-    # 1. Setup Mock Dataset
+    # Setup Mock Dataset
     dataset_name = "test_default_ds"
     workspace_dir = tmp_path / "workspace"
     built_ds_dir = workspace_dir / "datasets" / "built" / dataset_name
@@ -68,13 +66,13 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
     with open(ds_file, "w") as f:
         json.dump(ds_content, f)
 
-    # 2. Mock Constants
+    # Mock Constants
     monkeypatch.setattr(
         "dcv_benchmark.constants.BUILT_DATASETS_DIR",
         workspace_dir / "datasets" / "built",
     )
 
-    # 3. Create Config without dataset_name
+    # Create Config without dataset_name
     config = ExperimentConfig(
         name=dataset_name,
         target=TargetConfig(
@@ -89,7 +87,7 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
     # Ensure input.dataset_name is None
     config.input.dataset_name = None
 
-    # 4. Run (dry run with 0 samples effectively)
+    # Run (dry run with 0 samples effectively)
     runner = ExperimentRunner(output_dir=tmp_path / "results")
 
     mock_loader_cls = MagicMock()
@@ -108,8 +106,6 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
     try:
         runner.run(config, limit=0)
     except Exception:  # noqa: S110
-        # Expected error because built_ds_dir/dataset.json is partially mocked
-        # or just testing the fallback logic path invocation
         pass
 
     expected_path = str(built_ds_dir / "dataset.json")
@@ -182,7 +178,6 @@ def test_debug_traces_flag(
     t1 = datetime.datetime(2023, 1, 1, 12, 0, 0)
     t2 = datetime.datetime(2023, 1, 1, 12, 1, 0)
 
-    # Let's use a side_effect on a mocked datetime class
     real_datetime = datetime.datetime
 
     class MockDatetime(real_datetime):

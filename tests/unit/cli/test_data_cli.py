@@ -50,9 +50,6 @@ def test_handle_download_bipia(mock_data_dependencies):
 
     mocks["dl_bipia"].assert_called_once()
     mocks["dl_squad"].assert_not_called()
-    # verify output dir was passed (logic is inside function, but we can check
-    # calls if we mocked Path, but primarily we just want to ensure the right
-    # downloader is called)
 
 
 def test_handle_download_unknown(mock_data_dependencies):
@@ -100,10 +97,6 @@ def test_handle_build_success(mock_data_dependencies):
     mocks["builder_cls"].assert_called_once()
     mocks["builder_cls"].return_value.build.assert_called_once()
     mocks["builder_cls"].return_value.save.assert_called_once()
-
-    # Ensure config was NOT copied
-    # mock_shutil is no longer available, nor used.
-    pass
 
 
 def test_handle_build_overwrite_denied(mock_data_dependencies):

@@ -21,7 +21,7 @@ def run_experiment(
         logger.error(f"Experiment config file not found: {config_path}")
         sys.exit(1)
 
-    # 1. Load Configuration
+    # Load Configuration
     try:
         with open(config_path, encoding="utf-8") as f:
             raw_config = yaml.safe_load(f)
@@ -36,24 +36,21 @@ def run_experiment(
         logger.error(f"Failed to parse experiment config: {e}")
         sys.exit(1)
 
-    # 2. Setup Logging
+    # Setup Logging
     # If the user requested debug traces, we might want to adjust log levels
     if debug_traces:
-        # Note: calling setup_logging here might override global settings.
-        # But if the user passed --debug-traces specific to this command,
-        # it makes sense.
         setup_logging("DEBUG")
         logger.debug("Debug traces enabled.")
 
     logger.info(f"Starting Experiment: {exp_config.name} (v{exp_config.version})")
 
-    # 3. Initialize Runner
+    # Initialize Runner
     # Results will be saved next to the config file by default
     output_dir = config_path.parent / "results"
     runner = ExperimentRunner(output_dir=output_dir)
 
     try:
-        # 4. Execute
+        # Execute
         runner.run(exp_config, limit=limit, debug_traces=debug_traces)
     except Exception as e:
         logger.exception(f"Experiment failed: {e}")

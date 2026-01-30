@@ -24,21 +24,12 @@ def register_data_commands(subparsers: Any, parent_parser: Any) -> None:
         "data",
         help="Data Factory tools",
         parents=[parent_parser],  # Inherit global flags like --debug
-        add_help=False,  # Let the parent parser handle help if needed, but usually we
-        # want help here.
-        # Wait, if we use parents, we usually don't suppress help unless we want to
-        # avoid duplicates.
-        # Standard pattern is parents=[parent], and we CAN have help.
+        add_help=False,  # Let the parent parser handle help if needed
     )
-    # Re-enable help since we might have suppressed it above or want to ensure it shows
-    # up.
-    # Actually, if we use a parent parser with add_help=False for the global flags,
-    # we should be fine.
-    # The parent_parser passed in should likely be configured with add_help=False.
 
     data_subs = data_parser.add_subparsers(dest="data_command", required=True)
 
-    # --- Download Command ---
+    # Download Command
     dl_parser = data_subs.add_parser(
         "download", help="Fetch raw datasets (SQuAD, BIPIA)", parents=[parent_parser]
     )
@@ -54,7 +45,7 @@ def register_data_commands(subparsers: Any, parent_parser: Any) -> None:
     )
     dl_parser.set_defaults(func=handle_download)
 
-    # --- Build Command ---
+    # Build Command
     build_parser = data_subs.add_parser(
         "build", help="Generate/Inject a dataset from a recipe", parents=[parent_parser]
     )

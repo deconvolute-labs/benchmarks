@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Any, cast
 
 import chromadb
-import openai  # This is okay for now
+import openai  # Using it here directly is okay for now
 from chromadb.config import Settings
 
 from dcv_benchmark.models.experiments_config import EmbeddingConfig, RetrieverConfig

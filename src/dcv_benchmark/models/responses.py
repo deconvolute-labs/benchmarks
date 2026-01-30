@@ -14,7 +14,6 @@ class TargetResponse(BaseModel):
     """
 
     # The final output the user sees (potentially sanitized)
-    # The final output the user sees (potentially sanitized)
     # Optional because a Retriever-only run produces no generated text
     content: str | None = Field(default=None, description="Final user-facing content.")
 

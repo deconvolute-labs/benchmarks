@@ -3,7 +3,6 @@ import logging
 import random
 from pathlib import Path
 
-# We allow this to fail gracefully if the optional 'data' dependencies aren't installed
 try:
     from datasets import load_dataset
     from tqdm import tqdm
@@ -31,7 +30,7 @@ def fetch_squad_subset(output_dir: Path, count: int = 300, seed: int = 42) -> No
 
     logger.info("Loading SQuAD (validation split) via HuggingFace...")
 
-    # Load the FULL validation split
+    # Load the full validation split
     dataset = load_dataset("squad", split="validation", streaming=False)
 
     # Convert to list to shuffle
@@ -49,8 +48,7 @@ def fetch_squad_subset(output_dir: Path, count: int = 300, seed: int = 42) -> No
     clean_samples: list[dict[str, Any]] = []
     seen_contexts = set()
 
-    # Select samples, preferring UNIQUE contexts to maximize diversity
-    # We use a simple progress bar if tqdm is available
+    # Select samples, preferring unique contexts to maximize diversity
     iterator = (
         tqdm(all_samples, total=count, desc="Selecting samples")
         if tqdm
