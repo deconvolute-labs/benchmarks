@@ -3,7 +3,7 @@ from dcv_benchmark.models.config.defense import (
     DefenseConfig,
     LanguageConfig,
     MLScannerConfig,
-    YaraConfig,
+    SignatureConfig,
 )
 from dcv_benchmark.models.config.experiment import (
     BipiaInputConfig,
@@ -33,7 +33,7 @@ __all__ = [
     "DefenseConfig",
     "CanaryConfig",
     "LanguageConfig",
-    "YaraConfig",
+    "SignatureConfig",
     "MLScannerConfig",
     "EmbeddingConfig",
     "RetrieverConfig",

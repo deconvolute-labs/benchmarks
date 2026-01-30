@@ -72,13 +72,15 @@ class BasicRAG(BaseTarget):
                 f"{config.defense.language.settings}"
             )
 
-        # 3. Signature Defense (Ingestion Layer - YARA)
+        # 3. Signature Defense (Ingestion Layer)
         self.signature_detector: SignatureDetector | None = None
-        if config.defense.yara and config.defense.yara.enabled:
-            self.signature_detector = SignatureDetector(**config.defense.yara.settings)
+        if config.defense.signature and config.defense.signature.enabled:
+            self.signature_detector = SignatureDetector(
+                **config.defense.signature.settings
+            )
             logger.info(
-                "Defense [Signature/YARA]: ENABLED. Config: "
-                f"{config.defense.yara.settings}"
+                "Defense [Signature]: ENABLED. Config: "
+                f"{config.defense.signature.settings}"
             )
 
         # Load system prompt
@@ -98,7 +100,7 @@ class BasicRAG(BaseTarget):
         Populates the target's vector store with the provided corpus.
 
         This implementation simulates a standard RAG ingestion pipeline:
-        1. (Optional) Scans documents for threats using the configured Signature/YARA
+        1. (Optional) Scans documents for threats using the configured Signature
            detector.
         2. Filters out blocked documents.
         3. Indexes the safe documents into the ephemeral vector store.
@@ -121,7 +123,7 @@ class BasicRAG(BaseTarget):
         for doc in documents:
             is_clean = True
 
-            # Check 1: Signature / YARA
+            # Check 1: Signature
             if self.signature_detector:
                 result = self.signature_detector.check(doc)
                 if result.threat_detected:
@@ -184,7 +186,7 @@ class BasicRAG(BaseTarget):
         context_chunks = []
 
         if forced_context is not None:
-            # If we have a Signature Detector (YARA/Scanner),
+            # If we have a Signature Detector (Scanner),
             # we check the raw docs here.
             if self.signature_detector:
                 for chunk in forced_context:

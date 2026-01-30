@@ -18,7 +18,7 @@ def mock_config():
     # Set defense fields to None to avoid MagicMock truthiness (defaults to True)
     config.defense.canary = None
     config.defense.language = None
-    config.defense.yara = None
+    config.defense.signature = None
     config.defense.ml_scanner = None
 
     # Default generate to True (Normal Mode)

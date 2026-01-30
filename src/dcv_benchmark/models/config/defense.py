@@ -17,8 +17,10 @@ class LanguageConfig(BaseModel):
     settings: dict[str, Any] = Field(default_factory=dict)
 
 
-class YaraConfig(BaseModel):
-    enabled: bool = Field(default=False, description="Whether YARA defense is active.")
+class SignatureConfig(BaseModel):
+    enabled: bool = Field(
+        default=False, description="Whether Signature defense is active."
+    )
     settings: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -46,5 +48,5 @@ class DefenseConfig(BaseModel):
     # Explicit Defense Layers
     canary: CanaryConfig | None = Field(default=None)
     language: LanguageConfig | None = Field(default=None)
-    yara: YaraConfig | None = Field(default=None)
+    signature: SignatureConfig | None = Field(default=None)
     ml_scanner: MLScannerConfig | None = Field(default=None)
