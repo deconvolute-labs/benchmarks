@@ -10,7 +10,12 @@ from dcv_benchmark.models.evaluation import (
 )
 from dcv_benchmark.models.responses import TargetResponse
 from dcv_benchmark.models.traces import TraceItem
-from dcv_benchmark.utils.logger import get_logger, print_run_summary
+from dcv_benchmark.utils.logger import (
+    get_logger,
+    print_dataset_header,
+    print_experiment_header,
+    print_run_summary,
+)
 
 logger = get_logger(__name__)
 
@@ -26,18 +31,40 @@ class ExperimentRunner:
         debug_traces: bool = False,
     ) -> Path:
         """
-        Executes the experiment loop.
-        Returns the path to the run directory.
+        Executes the full experiment loop for a given configuration.
+
+        Orchestrates the loading of the dataset, initialization of the target system
+        (including defenses), and the evaluation of every sample. It records detailed
+        execution traces to JSONL and generates a final summary report.
+
+        Args:
+            experiment_config (ExperimentConfig): The complete configuration object
+                defining the input dataset, target system, and evaluator settings.
+            limit (int | None, optional): If provided, stops the experiment after
+                processing this many samples. Useful for "smoke testing" a config.
+                Defaults to None (process all samples).
+            debug_traces (bool, optional): If True, includes full user queries and
+                raw response content in the `traces.jsonl` output. If False, sensitive
+                content is redacted to save space and reduce noise. Defaults to False.
+
+        Returns:
+            Path: Directory path where the run artifacts (results.json, traces, plots)
+            have been saved.
+
+        Raises:
+            ValueError: If the dataset fails to load or the target cannot be initialized
         """
         start_time = datetime.datetime.now()
         run_id = start_time.strftime(TIMESTAMP_FORMAT)
         run_dir = self.output_dir / f"run_{run_id}"
 
+        print_experiment_header(experiment_config.model_dump())
         logger.info(f"Starting Run: {run_id}")
         logger.info("Initializing components ...")
 
         # 1. Load Dataset
         dataset = load_dataset(experiment_config)
+        print_dataset_header(experiment_config.input.model_dump())
 
         # 2. Create Target
         target = create_target(experiment_config)

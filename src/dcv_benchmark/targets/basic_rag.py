@@ -72,13 +72,15 @@ class BasicRAG(BaseTarget):
                 f"{config.defense.language.settings}"
             )
 
-        # 3. Signature Defense (Ingestion Layer - YARA)
+        # 3. Signature Defense (Ingestion Layer)
         self.signature_detector: SignatureDetector | None = None
-        if config.defense.yara and config.defense.yara.enabled:
-            self.signature_detector = SignatureDetector(**config.defense.yara.settings)
+        if config.defense.signature and config.defense.signature.enabled:
+            self.signature_detector = SignatureDetector(
+                **config.defense.signature.settings
+            )
             logger.info(
-                "Defense [Signature/YARA]: ENABLED. Config: "
-                f"{config.defense.yara.settings}"
+                "Defense [Signature]: ENABLED. Config: "
+                f"{config.defense.signature.settings}"
             )
 
         # Load system prompt
@@ -95,14 +97,18 @@ class BasicRAG(BaseTarget):
 
     def ingest(self, documents: list[str]) -> None:
         """
-        Populates the vector store with the provided dataset.
+        Populates the target's vector store with the provided corpus.
 
-        This method is idempotent-ish for the benchmark run (adds to the ephemeral DB).
-        If no vector store is configured, this operation logs a warning and skips.
-        Applies Ingestion-side defenses (YARA, ML) if enabled.
+        This implementation simulates a standard RAG ingestion pipeline:
+        1. (Optional) Scans documents for threats using the configured Signature
+           detector.
+        2. Filters out blocked documents.
+        3. Indexes the safe documents into the ephemeral vector store.
 
         Args:
-            documents: A list of text strings (knowledge base) to index.
+            documents (list[str]): The raw text content of the documents to index.
+                If the `retriever` config is missing, this operation is skipped with a
+                warning.
         """
         if not self.vector_store:
             logger.warning("Ingest called but no Vector Store is configured. Skipping.")
@@ -117,7 +123,7 @@ class BasicRAG(BaseTarget):
         for doc in documents:
             is_clean = True
 
-            # Check 1: Signature / YARA
+            # Check 1: Signature
             if self.signature_detector:
                 result = self.signature_detector.check(doc)
                 if result.threat_detected:
@@ -148,23 +154,30 @@ class BasicRAG(BaseTarget):
         retrieve_only: bool = False,
     ) -> TargetResponse:
         """
-        Executes the RAG pipeline for a single input user query.
+        Orchestrates the RAG pipeline with Deconvolute defense layers.
 
-        Controls the flow of data through Retrieval, Defense (input), Prompt Assembly,
-        Generation, and Defense (output).
+        Execution Flow:
+            1. **Retrieval**: Fetches context from the vector store OR uses
+               `forced_context`.
+            2. **Ingestion Scan** (if forced_context): Checks raw context against
+                signatures.
+            3. **Input Defense**: Injects the Canary token into the system prompt.
+            4. **Generation**: Calls the configured LLM.
+            5. **Output Defense (Canary)**: Verifies the presence of the Canary token.
+            6. **Output Defense (Language)**: Checks if the output matches the expected
+               language.
 
         Args:
-            user_query: The end-user's query.
-            system_prompt: Optional override for the system instruction.
-                           If None, uses the one loaded based on the config.
-            forced_context: List of strings to use as context, bypassing the retriever.
-                            Useful for testing Generator robustness in isolation.
-            retrieve_only: If True, executes only the retrieval step and returns the
-                           found context in metadata, skipping LLM generation.
+            user_query (str): The end-user's input.
+            system_prompt (str | None, optional): Override for the system instruction.
+            forced_context (list[str] | None, optional): Bypasses retrieval to test
+                generation on specific (potentially malicious) chunks.
+            retrieve_only (bool, optional): If True, returns after retrieval/scanning
+                without invoking the LLM.
 
         Returns:
-            TargetResponse containing model output (or empty string if retrieve_only),
-            metadata about the run (context, model), and any defense triggers/signals.
+            TargetResponse: The model output, including `attack_detected` flags if
+            any defense layer (Signature, Canary, or Language) triggered.
         """
 
         original_system_prompt = system_prompt or self.system_prompt
@@ -173,16 +186,49 @@ class BasicRAG(BaseTarget):
         context_chunks = []
 
         if forced_context is not None:
+            # If we have a Signature Detector (Scanner),
+            # we check the raw docs here.
+            if self.signature_detector:
+                for chunk in forced_context:
+                    scan_result = self.signature_detector.check(chunk)
+
+                    if scan_result.threat_detected:
+                        # HIT: Threat detected on raw document.
+                        # We STOP here. No LLM call.
+                        logger.info(
+                            "Scan Defense triggered on raw context: "
+                            f"{scan_result.metadata}"
+                        )
+                        return TargetResponse(
+                            content="[Blocked by Signature Scan]",
+                            raw_content=None,
+                            used_context=forced_context,
+                            attack_detected=True,
+                            detection_reason=(
+                                f"Signature Scan: "
+                                f"{getattr(scan_result, 'metadata', 'Threat')}"
+                            ),
+                            metadata={"stage": "ingestion_scan"},
+                        )
+
+            # If we get here, the Scan missed (or no scanner enabled).
             context_chunks = forced_context
-            logger.debug("Using forced context.")
+            logger.debug("Using forced context (Simulated Ingestion).")
         elif self.vector_store:
             context_chunks = self.vector_store.search(user_query)
             logger.debug(f"Retrieved {len(context_chunks)} chunks.")
 
-        # For Retriever only testing
-        if retrieve_only:
+        # 2. Check Generation Flag (The "Scan Mode" Support)
+        # If the user configured generate=False, we stop here.
+        # This covers the "Miss" case where we don't want to waste tokens on the LLM.
+        if not self.config.generate or retrieve_only:
             return TargetResponse(
-                content="", raw_content=None, used_context=context_chunks
+                content="",  # Empty content
+                raw_content=None,
+                used_context=context_chunks,
+                attack_detected=False,  # We scanned, but found nothing
+                detection_reason=None,
+                metadata={"stage": "ingestion_scan", "skipped_generation": True},
             )
 
         # Defense: Canary injection (input side)

@@ -14,8 +14,8 @@ from dcv_benchmark.models.dataset import (
 from dcv_benchmark.models.evaluation import SecurityEvaluationResult
 from dcv_benchmark.models.experiments_config import (
     ExperimentConfig,
-    InputConfig,
     ScenarioConfig,
+    SquadInputConfig,
     TargetConfig,
 )
 from dcv_benchmark.models.responses import TargetResponse
@@ -92,6 +92,7 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
     # Create Config without dataset_name
     config = ExperimentConfig(
         name=dataset_name,
+        input=SquadInputConfig(type="squad", dataset_name="placeholder"),
         target=TargetConfig(
             name="basic_rag",
             system_prompt={"file": "foo", "key": "bar"},
@@ -102,7 +103,7 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
         evaluator={"type": "canary"},
     )
     # Ensure input.dataset_name is None
-    config.input.dataset_name = None
+    config.input.dataset_name = ""
 
     # Run (dry run with 0 samples effectively)
     runner = ExperimentRunner(output_dir=tmp_path / "results")
@@ -122,8 +123,7 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
 
     runner.run(config, limit=0)
 
-    expected_path = str(built_ds_dir / "dataset.json")
-    mock_loader_cls.assert_called_with(expected_path)
+    mock_loader_cls.assert_called_with(dataset_name)
 
 
 def test_debug_traces_flag(
@@ -177,7 +177,7 @@ def test_debug_traces_flag(
 
     config = ExperimentConfig(
         name="test_exp",
-        input=InputConfig(dataset_name="dummy"),
+        input=SquadInputConfig(type="squad", dataset_name="dummy"),
         target=TargetConfig(
             name="basic_rag",
             system_prompt={"file": "foo", "key": "bar"},

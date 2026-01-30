@@ -26,7 +26,7 @@ logger = get_logger(__name__)
 class SquadBuilder(BaseDatasetBuilder):
     """
     Orchestrates the creation of a RAG Security Dataset based on the
-    SQUAD dataset.
+    SQuAD dataset.
 
     Workflow:
     1. Load raw samples (Query + Gold Chunk) from a corpus.

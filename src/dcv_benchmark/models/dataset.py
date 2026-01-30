@@ -93,5 +93,5 @@ class BipiaDataset(BaseDataset):
     pass
 
 
-# For backward compatibility if needed, though we should update references
+# For backward compatibility
 Dataset = BaseDataset

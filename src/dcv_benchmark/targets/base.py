@@ -39,17 +39,26 @@ class BaseTarget(ABC):
         retrieve_only: bool = False,
     ) -> TargetResponse:
         """
-        Executes the pipeline for a specific input.
+        Executes the target pipeline for a single interaction.
+
+        This method encapsulates the entire RAG flow: Retrieval (if enabled),
+        Input Defense (e.g. Canary injection), LLM Generation, and Output Defense.
 
         Args:
-            user_query: The query from the user.
-            system_prompt: ptional override for the system instruction.
-            forced_context: If provided, injects this context (skipping retrieval).
-                            Used for testing Generator robustness in isolation.
-            retrieve_only: If True, stops after retrieval and returns documents.
-                           Used for testing Retriever robustness in isolation.
+            user_query (str): The final user input string (e.g. a question or command).
+            system_prompt (str | None, optional): An override for the system
+                instruction. If None, the target uses its configured default system
+                prompt.
+            forced_context (list[str] | None, optional): A list of context strings to
+                inject directly into the prompt, bypassing the retrieval step.
+                Used to test Generator robustness in isolation or to simulate
+                specific retrieval outcomes (e.g. "Oracle" tests).
+            retrieve_only (bool, optional): If True, the pipeline stops after the
+                retrieval step. The returned TargetResponse will contain the
+                retrieved chunks but an empty generation. Defaults to False.
 
         Returns:
-            A TargetResponse object.
+            TargetResponse: A unified object containing the model's output text,
+            metadata, and any security signals (e.g. `attack_detected=True`).
         """
         pass

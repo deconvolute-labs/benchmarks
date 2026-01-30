@@ -18,10 +18,11 @@ def main() -> None:
         prog="dcv-benchmark",
         description=(
             "Deconvolute AI Benchmarking Tool\n"
-            "Evaluate RAG security and robustness against adversarial attacks."
+            "Evaluate the Deconvolute SDK for RAG security and robustness against "
+            "adversarial attacks."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        parents=[parent_parser],  # Allow --debug at root level too
+        parents=[parent_parser],  # Allow --debug at root level
     )
 
     # Create subparsers for the top-level commands

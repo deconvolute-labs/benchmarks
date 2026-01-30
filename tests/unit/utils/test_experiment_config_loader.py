@@ -12,7 +12,11 @@ def valid_experiment_data():
         "experiment": {
             "name": "test_exp",
             "description": "test",
-            "input": {"dataset_path": "data.json"},
+            "input": {
+                "dataset_path": "data.json",
+                "type": "squad",
+                "dataset_name": "data.json",
+            },
             "target": {
                 "name": "toy_rag",
                 "system_prompt": {"file": "prompts.yaml", "key": "promptA"},
@@ -67,7 +71,7 @@ def test_missing_top_level_key(tmp_path):
 
 
 def test_validation_missing_required_section(tmp_path, valid_experiment_data):
-    """It should detect missing required sections (e.g., 'target')."""
+    """It should detect missing required sections ( 'target')."""
     # Remove 'target' from the valid data
     del valid_experiment_data["experiment"]["target"]
 

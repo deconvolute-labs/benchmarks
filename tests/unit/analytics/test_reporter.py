@@ -19,7 +19,7 @@ def mock_config():
     return ExperimentConfig(
         name="test_run",
         description="A test run",
-        input={"dataset_path": "data.json"},
+        input={"dataset_name": "data.json", "type": "squad"},
         target={
             "name": "rag",
             "defense": {

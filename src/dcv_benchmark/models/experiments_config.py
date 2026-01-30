@@ -3,13 +3,15 @@ from dcv_benchmark.models.config.defense import (
     DefenseConfig,
     LanguageConfig,
     MLScannerConfig,
-    YaraConfig,
+    SignatureConfig,
 )
 from dcv_benchmark.models.config.experiment import (
+    BipiaInputConfig,
     EvaluatorConfig,
     ExperimentConfig,
     InputConfig,
     ScenarioConfig,
+    SquadInputConfig,
 )
 from dcv_benchmark.models.config.target import (
     EmbeddingConfig,
@@ -23,13 +25,15 @@ from dcv_benchmark.models.config.target import (
 __all__ = [
     "ExperimentConfig",
     "InputConfig",
+    "SquadInputConfig",
+    "BipiaInputConfig",
     "EvaluatorConfig",
     "ScenarioConfig",
     "TargetConfig",
     "DefenseConfig",
     "CanaryConfig",
     "LanguageConfig",
-    "YaraConfig",
+    "SignatureConfig",
     "MLScannerConfig",
     "EmbeddingConfig",
     "RetrieverConfig",

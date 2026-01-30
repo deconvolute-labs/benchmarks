@@ -28,7 +28,7 @@ def mock_dependencies():
                 "prompt_template": {"file": "templates.yaml", "key": "default"},
                 "defense": {"required_version": None},
             },
-            "input": {"dataset_name": "test_dataset"},
+            "input": {"dataset_name": "test_dataset", "type": "squad"},
             "evaluator": {"type": "canary"},
         }
 
