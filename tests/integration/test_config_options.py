@@ -28,7 +28,7 @@ def mock_dataset_sample():
         sample_type="benign",
         query="test query",
         labels=[],
-        context=[{"content": "test context", "source": "test", "id": "1"}],  # added id
+        context=[{"content": "test context", "source": "test", "id": "1"}],
     )
 
 
