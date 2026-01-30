@@ -5,14 +5,16 @@ from dcv_benchmark.constants import (
     AVAILABLE_EVALUATORS,
     BASELINE_TARGET_KEYWORD,
     BUILT_DATASETS_DIR,
+    RAW_DATASETS_DIR,
 )
+from dcv_benchmark.data_factory.bipia.bipia import BipiaBuilder
 from dcv_benchmark.evaluators.base import BaseEvaluator
 from dcv_benchmark.evaluators.bipia import BipiaEvaluator
 from dcv_benchmark.evaluators.canary import CanaryEvaluator
 from dcv_benchmark.evaluators.keyword import KeywordEvaluator
 from dcv_benchmark.evaluators.language import LanguageMismatchEvaluator
 from dcv_benchmark.models.config.experiment import EvaluatorConfig, ExperimentConfig
-from dcv_benchmark.models.dataset import BaseDataset
+from dcv_benchmark.models.dataset import BaseDataset, BipiaDataset, DatasetMeta
 from dcv_benchmark.targets.basic_rag import BasicRAG
 from dcv_benchmark.targets.basic_rag_guard import BasicRAGGuard
 from dcv_benchmark.utils.dataset_loader import DatasetLoader
@@ -22,24 +24,58 @@ logger = get_logger(__name__)
 
 
 def load_dataset(experiment_config: ExperimentConfig) -> BaseDataset:
-    """Loads dataset based on config or default path."""
-    dataset_path_or_name = experiment_config.input.dataset_name
-    if not dataset_path_or_name:
-        fallback_path = BUILT_DATASETS_DIR / experiment_config.name / "dataset.json"
-        if not fallback_path.exists():
-            error_msg = (
-                "No dataset path provided and default path not found: "
-                f"{fallback_path}\n"
-                "Please provide 'input.dataset_name' in config or ensure the "
-                "default dataset exists."
-            )
-            logger.error(error_msg)
-            raise ValueError(error_msg)
+    """Loads (or builds) dataset based on config."""
+    input_config = experiment_config.input
 
-        logger.info(f"No dataset provided. Using default path: {fallback_path}")
-        dataset_path_or_name = str(fallback_path)
+    # -- Case 1: BIPIA (On-the-fly build) --
+    if input_config.type == "bipia":
+        logger.info("Building BIPIA dataset in-memory...")
+        builder = BipiaBuilder(
+            raw_dir=RAW_DATASETS_DIR / "bipia", seed=input_config.seed
+        )
+        samples = builder.build(
+            tasks=input_config.tasks,
+            injection_pos=input_config.injection_pos,
+            max_samples=input_config.max_samples,
+        )
 
-    dataset: BaseDataset = DatasetLoader(dataset_path_or_name).load()
+        # Wrap in ephemeral BipiaDataset
+        dataset = BipiaDataset(
+            meta=DatasetMeta(
+                name=f"bipia_ephemeral_{experiment_config.name}",
+                type="bipia",
+                version="1.0.0-mem",
+                description="Ephemeral BIPIA dataset built from config",
+                author="Deconvolute Labs (Runtime)",
+            ),
+            samples=samples,
+        )
+        logger.info(f"Built BIPIA dataset with {len(samples)} samples.")
+        return dataset
+
+    # -- Case 2: SQuAD / Standard (Load from disk) --
+    # input_config is SquadInputConfig
+    dataset_name = input_config.dataset_name
+    if not dataset_name:
+        # Fallback: Use Experiment Name
+        logger.info(
+            "No dataset name in config. Attempting fallback to experiment name."
+        )
+        dataset_name = experiment_config.name
+
+    fallback_path = BUILT_DATASETS_DIR / dataset_name / "dataset.json"
+
+    # Try loading via loader (which handles resolution)
+    try:
+        dataset: BaseDataset = DatasetLoader(dataset_name).load()  # type: ignore
+    except FileNotFoundError:
+        # Retry with direct fallback path to be helpful
+        if fallback_path.exists():
+            logger.info(f"Using fallback path: {fallback_path}")
+            dataset = DatasetLoader(str(fallback_path)).load()  # type: ignore
+        else:
+            raise
+
     logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
     logger.info(f"Description: {dataset.meta.description}")
     return dataset

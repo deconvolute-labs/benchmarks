@@ -10,8 +10,8 @@ from dcv_benchmark.models.experiments_config import (
     DefenseConfig,
     EvaluatorConfig,
     ExperimentConfig,
-    InputConfig,
     ScenarioConfig,
+    SquadInputConfig,
     TargetConfig,
 )
 
@@ -33,7 +33,7 @@ def valid_config():
     return ExperimentConfig(
         name="unit_test_exp",
         description="unit test",
-        input=InputConfig(dataset_name="dummy.json"),
+        input=SquadInputConfig(type="squad", dataset_name="dummy.json"),
         target=TargetConfig(
             name="basic_rag",
             defense=DefenseConfig(
@@ -61,9 +61,9 @@ def test_run_missing_dataset_path(valid_config, tmp_path):
     runner = ExperimentRunner(output_dir=tmp_path)
     # Ensure BUILT_DATASETS_DIR doesn't incidentally match anything
     with patch("dcv_benchmark.core.factories.BUILT_DATASETS_DIR", tmp_path / "built"):
-        valid_config.input.dataset_name = None
+        valid_config.input.dataset_name = ""
 
-        with pytest.raises(ValueError, match="No dataset path provided"):
+        with pytest.raises(FileNotFoundError):
             runner.run(valid_config)
 
 

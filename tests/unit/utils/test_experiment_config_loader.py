@@ -12,7 +12,11 @@ def valid_experiment_data():
         "experiment": {
             "name": "test_exp",
             "description": "test",
-            "input": {"dataset_path": "data.json"},
+            "input": {
+                "dataset_path": "data.json",
+                "type": "squad",
+                "dataset_name": "data.json",
+            },
             "target": {
                 "name": "toy_rag",
                 "system_prompt": {"file": "prompts.yaml", "key": "promptA"},

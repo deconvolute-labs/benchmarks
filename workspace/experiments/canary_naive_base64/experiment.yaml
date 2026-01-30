@@ -5,6 +5,7 @@ experiment:
 
   input:
     dataset_name: "squad_canary_v1"
+    type: "squad"
 
   target:
     name: "basic_rag"

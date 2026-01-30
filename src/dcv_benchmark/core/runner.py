@@ -10,7 +10,12 @@ from dcv_benchmark.models.evaluation import (
 )
 from dcv_benchmark.models.responses import TargetResponse
 from dcv_benchmark.models.traces import TraceItem
-from dcv_benchmark.utils.logger import get_logger, print_run_summary
+from dcv_benchmark.utils.logger import (
+    get_logger,
+    print_dataset_header,
+    print_experiment_header,
+    print_run_summary,
+)
 
 logger = get_logger(__name__)
 
@@ -33,11 +38,13 @@ class ExperimentRunner:
         run_id = start_time.strftime(TIMESTAMP_FORMAT)
         run_dir = self.output_dir / f"run_{run_id}"
 
+        print_experiment_header(experiment_config.model_dump())
         logger.info(f"Starting Run: {run_id}")
         logger.info("Initializing components ...")
 
         # 1. Load Dataset
         dataset = load_dataset(experiment_config)
+        print_dataset_header(experiment_config.input.model_dump())
 
         # 2. Create Target
         target = create_target(experiment_config)

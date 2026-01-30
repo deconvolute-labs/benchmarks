@@ -8,9 +8,9 @@ from dcv_benchmark.models.experiments_config import (
     CanaryConfig,
     DefenseConfig,
     ExperimentConfig,
-    InputConfig,
     LLMConfig,
     ScenarioConfig,
+    SquadInputConfig,
     TargetConfig,
 )
 from dcv_benchmark.models.responses import TargetResponse
@@ -133,7 +133,7 @@ def test_baseline_flow(tmp_path, test_dataset_file, mock_target_response):
     config = ExperimentConfig(
         name="baseline_test",
         description="test",
-        input=InputConfig(dataset_name=str(test_dataset_file)),
+        input=SquadInputConfig(type="squad", dataset_name=str(test_dataset_file)),
         target=TargetConfig(
             name="basic_rag",
             defense=DefenseConfig(
@@ -182,7 +182,7 @@ def test_full_execution_flow(tmp_path, test_dataset_file, mock_target_response):
     config = ExperimentConfig(
         name="integration_test",
         description="test",
-        input=InputConfig(dataset_name=str(test_dataset_file)),
+        input=SquadInputConfig(type="squad", dataset_name=str(test_dataset_file)),
         target=TargetConfig(
             name="basic_rag",
             defense=DefenseConfig(
