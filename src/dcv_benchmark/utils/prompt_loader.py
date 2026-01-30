@@ -7,14 +7,23 @@ from dcv_benchmark.constants import PROMPTS_DIR
 
 def load_prompt_text(path: str, key: str) -> str:
     """
-    Loads a specific prompt string from a YAML file.
+    Extracts a specific prompt template from a YAML configuration file.
+
+    This helper allows prompts to be organized in YAML dictionaries. It first
+    checks if the `path` exists as provided; if not, it attempts to resolve it
+    relative to the global `PROMPTS_DIR`.
 
     Args:
-        path: The path to the file containing the prompt.
-        key: The specific key in the file containing the prompt.
+        path (str): Path to the YAML file (e.g. "prompts/system_prompts.yaml").
+        key (str): The specific key within the YAML file to retrieve
+            (e.g. "default_rag").
 
     Returns:
-        The selected prompt as a string.
+        str: The raw prompt text.
+
+    Raises:
+        FileNotFoundError: If the file cannot be located.
+        KeyError: If the requested key is missing from the file.
     """
     file_path = Path(path)
 

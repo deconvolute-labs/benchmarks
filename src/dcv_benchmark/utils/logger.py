@@ -27,11 +27,20 @@ class CustomFormatter(logging.Formatter):
 
 def setup_logging(level: str | int = "INFO") -> None:
     """
-    Configures the root logger.
-    Should be called once at the application entry point.
+    Configures the root logger with a standardized format.
+
+    Sets up a stream handler that prints to stdout. It uses a custom formatter
+    that includes the logger name only when in DEBUG mode, keeping INFO logs clean.
+    It also silences noisy third-party libraries (like `httpx` and `chromadb`).
 
     Args:
-        level: The logging level (e.g. "DEBUG", "INFO").
+        level (str | int): The desired logging level (e.g. "DEBUG", "INFO").
+            Defaults to "INFO".
+
+    Note:
+        This function uses `force=True`, meaning it will overwrite any existing
+        logging configuration. This is intentional to ensure consistent formatting
+        during benchmark runs.
     """
     # Convert string level to int if necessary
     if isinstance(level, str):

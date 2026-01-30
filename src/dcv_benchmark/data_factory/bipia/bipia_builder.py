@@ -51,6 +51,25 @@ class BipiaBuilder(BaseDatasetBuilder):
         injection_pos: Literal["start", "middle", "end"] = "end",
         max_samples: int | None = None,
     ) -> list[BenchmarkSample]:
+        """
+        Generates a list of BIPIA benchmark samples by injecting attacks into templates.
+
+        Unlike the SQuAD builder, this does not require a retrieval corpus. It iterates
+        through the specified `tasks`, loads the corresponding raw templates
+        (e.g. emails), and injects an indirect prompt injection attack at the specified
+        position.
+
+        Args:
+            tasks (list[str]): The BIPIA scenarios to generate (e.g. 'email', 'code').
+            injection_pos (str, optional): Where to insert the attack payload within the
+                document ('start', 'middle', 'end'). Defaults to "end".
+            max_samples (int | None, optional): Limits the number of samples per task
+                to speed up generation during testing.
+
+        Returns:
+            list[BenchmarkSample]: A list of ready-to-use samples containing the
+            poisoned context and the expected behavior metadata.
+        """
         samples: list[BenchmarkSample] = []
 
         try:

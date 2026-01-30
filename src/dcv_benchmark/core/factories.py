@@ -25,7 +25,29 @@ logger = get_logger(__name__)
 
 
 def load_dataset(experiment_config: ExperimentConfig) -> BaseDataset:
-    """Loads (or builds) dataset based on config."""
+    """
+    Resolves and loads the input dataset based on the experiment configuration.
+
+    This factory handles two distinct workflows:
+    1. **BIPIA (Dynamic):** Builds the dataset in-memory on the fly using the
+       configured seed and tasks. No disk I/O is performed.
+    2. **SQuAD/Standard (Static):** Loads a pre-built JSON dataset from disk.
+       It attempts to locate the file in the standard `workspace/datasets/built`
+       directory, falling back to the experiment name if no specific dataset
+       name is provided.
+
+    Args:
+        experiment_config (ExperimentConfig): The full experiment configuration
+            containing the `input` section.
+
+    Returns:
+        BaseDataset: A populated dataset object (BipiaDataset or SquadDataset)
+        ready for the runner.
+
+    Raises:
+        ValueError: If the input type is unknown.
+        FileNotFoundError: If a static dataset cannot be found on disk.
+    """
     input_config = experiment_config.input
 
     # -- Case 1: BIPIA (On-the-fly build) --
@@ -129,7 +151,28 @@ def create_evaluator(
     target: Any = None,
     dataset: BaseDataset | None = None,
 ) -> BaseEvaluator:
-    """Creates the evaluator instance."""
+    """
+    Instantiates the appropriate Evaluator based on the configuration.
+
+    This factory handles dependency resolution for complex evaluators:
+    - **Keyword**: Validates that the `dataset` metadata matches the expected keyword.
+    - **BIPIA**: Resolves the 'Judge LLM' by either using a specific config or
+        borrowing the `target`'s LLM if none is provided.
+
+    Args:
+        config (EvaluatorConfig | None): The evaluator section from the experiment YAML.
+        target (Any, optional): The instantiated Target system. Required for the
+            BIPIA evaluator if it needs to share the generator's LLM.
+        dataset (BaseDataset | None, optional): The loaded dataset. Required for
+            the Keyword evaluator to validate the attack payload.
+
+    Returns:
+        BaseEvaluator: An initialized evaluator instance.
+
+    Raises:
+        ValueError: If the config is missing or if required dependencies (like
+        an LLM for the BIPIA judge) cannot be resolved.
+    """
     if config is None:
         error_msg = (
             "Missing Configuration: No evaluator specified.\nYou must explicitly"

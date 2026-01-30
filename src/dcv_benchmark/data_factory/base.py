@@ -62,10 +62,22 @@ class BaseDatasetBuilder(ABC):
 
     @abstractmethod
     def build(self, **kwargs: Any) -> Any:
-        # TODO: The return type should ideally be `Dataset` but we need to
-        # TODO: resolve circular imports
-        # or use ForwardRef / 'Dataset'. For now `Any` is permissive.
         """
-        Builds and returns the dataset.
+        Constructs a complete dataset based on the configured configuration.
+
+        Implementations should handle loading raw data, applying injection strategies
+        (if applicable), and formatting the result into a standardized Dataset object.
+
+        Args:
+            **kwargs (Any): Dynamic arguments specific to the builder implementation.
+                For example, BIPIA might accept `tasks` and `injection_pos`, while
+                SQuAD might accept `attack_rate`.
+
+        Returns:
+            Any: The constructed dataset object (typically a subclass of `BaseDataset`).
+
+            Note: The return type is currently `Any` to avoid circular import issues
+            with `dcv_benchmark.models.dataset`, but implementations should return
+            a valid Dataset instance.
         """
         pass

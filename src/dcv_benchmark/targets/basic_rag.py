@@ -95,14 +95,18 @@ class BasicRAG(BaseTarget):
 
     def ingest(self, documents: list[str]) -> None:
         """
-        Populates the vector store with the provided dataset.
+        Populates the target's vector store with the provided corpus.
 
-        This method is idempotent-ish for the benchmark run (adds to the ephemeral DB).
-        If no vector store is configured, this operation logs a warning and skips.
-        Applies Ingestion-side defenses (YARA, ML) if enabled.
+        This implementation simulates a standard RAG ingestion pipeline:
+        1. (Optional) Scans documents for threats using the configured Signature/YARA
+           detector.
+        2. Filters out blocked documents.
+        3. Indexes the safe documents into the ephemeral vector store.
 
         Args:
-            documents: A list of text strings (knowledge base) to index.
+            documents (list[str]): The raw text content of the documents to index.
+                If the `retriever` config is missing, this operation is skipped with a
+                warning.
         """
         if not self.vector_store:
             logger.warning("Ingest called but no Vector Store is configured. Skipping.")
@@ -148,23 +152,30 @@ class BasicRAG(BaseTarget):
         retrieve_only: bool = False,
     ) -> TargetResponse:
         """
-        Executes the RAG pipeline for a single input user query.
+        Orchestrates the RAG pipeline with Deconvolute defense layers.
 
-        Controls the flow of data through Retrieval, Defense (input), Prompt Assembly,
-        Generation, and Defense (output).
+        Execution Flow:
+            1. **Retrieval**: Fetches context from the vector store OR uses
+               `forced_context`.
+            2. **Ingestion Scan** (if forced_context): Checks raw context against
+                signatures.
+            3. **Input Defense**: Injects the Canary token into the system prompt.
+            4. **Generation**: Calls the configured LLM.
+            5. **Output Defense (Canary)**: Verifies the presence of the Canary token.
+            6. **Output Defense (Language)**: Checks if the output matches the expected
+               language.
 
         Args:
-            user_query: The end-user's query.
-            system_prompt: Optional override for the system instruction.
-                           If None, uses the one loaded based on the config.
-            forced_context: List of strings to use as context, bypassing the retriever.
-                            Useful for testing Generator robustness in isolation.
-            retrieve_only: If True, executes only the retrieval step and returns the
-                           found context in metadata, skipping LLM generation.
+            user_query (str): The end-user's input.
+            system_prompt (str | None, optional): Override for the system instruction.
+            forced_context (list[str] | None, optional): Bypasses retrieval to test
+                generation on specific (potentially malicious) chunks.
+            retrieve_only (bool, optional): If True, returns after retrieval/scanning
+                without invoking the LLM.
 
         Returns:
-            TargetResponse containing model output (or empty string if retrieve_only),
-            metadata about the run (context, model), and any defense triggers/signals.
+            TargetResponse: The model output, including `attack_detected` flags if
+            any defense layer (Signature, Canary, or Language) triggered.
         """
 
         original_system_prompt = system_prompt or self.system_prompt

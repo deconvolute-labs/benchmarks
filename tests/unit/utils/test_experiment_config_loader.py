@@ -71,7 +71,7 @@ def test_missing_top_level_key(tmp_path):
 
 
 def test_validation_missing_required_section(tmp_path, valid_experiment_data):
-    """It should detect missing required sections (e.g., 'target')."""
+    """It should detect missing required sections ( 'target')."""
     # Remove 'target' from the valid data
     del valid_experiment_data["experiment"]["target"]
 

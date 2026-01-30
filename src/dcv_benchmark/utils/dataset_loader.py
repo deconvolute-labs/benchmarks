@@ -36,11 +36,19 @@ class DatasetLoader:
 
     def load(self) -> BaseDataset:
         """
-        Reads the JSON file, validates it, and returns a Pydantic Dataset object.
+        Parses the dataset file and validates it against the schema.
+
+        This method handles the deserialization of the JSON content into
+        strict Pydantic models. It includes logic to auto-detect the dataset
+        type (SQuAD vs BIPIA) based on metadata, defaulting to SQuAD/Canary
+        for backward compatibility.
+
+        Returns:
+            BaseDataset: The validated dataset object.
 
         Raises:
-            FileNotFoundError: If the path does not exist.
-            ValidationError: If the JSON structure doesn't match the schema.
+            FileNotFoundError: If the resolved path does not exist.
+            ValueError: If the JSON is malformed or missing required fields.
         """
         if not self.path.exists():
             raise FileNotFoundError(f"Dataset file not found: {self.path}")
