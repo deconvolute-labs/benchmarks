@@ -153,7 +153,7 @@ def test_baseline_flow(tmp_path, test_dataset_file, mock_target_response):
     output_dir = tmp_path / "results_baseline"
     runner = ExperimentRunner(output_dir=str(output_dir))
 
-    with patch("dcv_benchmark.core.runner.BasicRAG") as MockBasicRAG:
+    with patch("dcv_benchmark.core.factories.BasicRAG") as MockBasicRAG:
         instance = MockBasicRAG.return_value
         instance.invoke.side_effect = mock_target_response
         run_dir = runner.run(config)
@@ -202,7 +202,7 @@ def test_full_execution_flow(tmp_path, test_dataset_file, mock_target_response):
     runner = ExperimentRunner(output_dir=str(output_dir))
 
     # To avoid real LLM calls
-    with patch("dcv_benchmark.core.runner.BasicRAG") as MockBasicRAG:
+    with patch("dcv_benchmark.core.factories.BasicRAG") as MockBasicRAG:
         instance = MockBasicRAG.return_value
         instance.invoke.side_effect = mock_target_response
 

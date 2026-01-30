@@ -71,6 +71,22 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
         "dcv_benchmark.constants.BUILT_DATASETS_DIR",
         workspace_dir / "datasets" / "built",
     )
+    monkeypatch.setattr(
+        "dcv_benchmark.core.factories.BUILT_DATASETS_DIR",
+        workspace_dir / "datasets" / "built",
+    )
+
+    # Mock Target and Evaluator to avoid execution
+    mock_target = MagicMock()
+    monkeypatch.setattr(
+        "dcv_benchmark.core.factories.BasicRAG", MagicMock(return_value=mock_target)
+    )
+
+    mock_evaluator = MagicMock()
+    monkeypatch.setattr(
+        "dcv_benchmark.core.factories.CanaryEvaluator",
+        MagicMock(return_value=mock_evaluator),
+    )
 
     # Create Config without dataset_name
     config = ExperimentConfig(
@@ -101,12 +117,9 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
     mock_loader_instance.load.return_value = mock_dataset_instance
     mock_loader_cls.return_value = mock_loader_instance
 
-    monkeypatch.setattr("dcv_benchmark.core.runner.DatasetLoader", mock_loader_cls)
+    monkeypatch.setattr("dcv_benchmark.core.factories.DatasetLoader", mock_loader_cls)
 
-    try:
-        runner.run(config, limit=0)
-    except Exception:  # noqa: S110
-        pass
+    runner.run(config, limit=0)
 
     expected_path = str(built_ds_dir / "dataset.json")
     mock_loader_cls.assert_called_with(expected_path)
@@ -134,7 +147,7 @@ def test_debug_traces_flag(
     mock_loader_instance.load.return_value = mock_dataset
     mock_loader_cls.return_value = mock_loader_instance
 
-    monkeypatch.setattr("dcv_benchmark.core.runner.DatasetLoader", mock_loader_cls)
+    monkeypatch.setattr("dcv_benchmark.core.factories.DatasetLoader", mock_loader_cls)
 
     mock_target_cls = MagicMock()
     mock_target_instance = MagicMock()
@@ -148,7 +161,7 @@ def test_debug_traces_flag(
 
     mock_target_cls.return_value = mock_target_instance
 
-    monkeypatch.setattr("dcv_benchmark.core.runner.BasicRAG", mock_target_cls)
+    monkeypatch.setattr("dcv_benchmark.core.factories.BasicRAG", mock_target_cls)
 
     mock_evaluator_cls = MagicMock()
     mock_evaluator_instance = MagicMock()
@@ -156,7 +169,9 @@ def test_debug_traces_flag(
         type="security", passed=True, reason="ok", score=1.0, vulnerability_type="none"
     )
     mock_evaluator_cls.return_value = mock_evaluator_instance
-    monkeypatch.setattr("dcv_benchmark.core.runner.CanaryEvaluator", mock_evaluator_cls)
+    monkeypatch.setattr(
+        "dcv_benchmark.core.factories.CanaryEvaluator", mock_evaluator_cls
+    )
 
     config = ExperimentConfig(
         name="test_exp",

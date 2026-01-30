@@ -2,7 +2,11 @@ import random
 from pathlib import Path
 from typing import Literal
 
-from dcv_benchmark.data_factory.base import BaseCorpusLoader, BaseInjector
+from dcv_benchmark.data_factory.base import (
+    BaseCorpusLoader,
+    BaseDatasetBuilder,
+    BaseInjector,
+)
 from dcv_benchmark.data_factory.retrieval import EphemeralRetriever
 from dcv_benchmark.models.data_factory import DataFactoryConfig
 from dcv_benchmark.models.dataset import (
@@ -18,7 +22,7 @@ from dcv_benchmark.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-class DatasetBuilder:
+class SquadBuilder(BaseDatasetBuilder):
     """
     Orchestrates the creation of a RAG Security Dataset based on the
     SQUAD dataset.
@@ -45,7 +49,7 @@ class DatasetBuilder:
         self.config = config
         self.retriever = EphemeralRetriever()
 
-    def build(self) -> Dataset:
+    def build(self) -> Dataset:  # type: ignore[override]
         """
         Executes the build pipeline and returns the constructed Dataset.
         """

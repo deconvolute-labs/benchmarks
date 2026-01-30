@@ -68,7 +68,8 @@ class BasicRAG(BaseTarget):
                 **config.defense.language.settings
             )
             logger.info(
-                f"Defense [Language]: ENABLED. Config: {config.defense.language.settings}"
+                "Defense [Language]: ENABLED. Config: "
+                f"{config.defense.language.settings}"
             )
 
         # 3. Signature Defense (Ingestion Layer - YARA)
@@ -76,7 +77,8 @@ class BasicRAG(BaseTarget):
         if config.defense.yara and config.defense.yara.enabled:
             self.signature_detector = SignatureDetector(**config.defense.yara.settings)
             logger.info(
-                f"Defense [Signature/YARA]: ENABLED. Config: {config.defense.yara.settings}"
+                "Defense [Signature/YARA]: ENABLED. Config: "
+                f"{config.defense.yara.settings}"
             )
 
         # Load system prompt
@@ -117,7 +119,6 @@ class BasicRAG(BaseTarget):
 
             # Check 1: Signature / YARA
             if self.signature_detector:
-                # We assume the SDK returns a result object with 'threat_detected' boolean
                 result = self.signature_detector.check(doc)
                 if result.threat_detected:
                     is_clean = False

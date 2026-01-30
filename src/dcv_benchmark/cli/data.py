@@ -1,17 +1,18 @@
 import sys
 from pathlib import Path
+from typing import Any
 
 import yaml
 
 from dcv_benchmark.constants import BUILT_DATASETS_DIR, RAW_DATASETS_DIR
-from dcv_benchmark.data_factory.bipia import BipiaBuilder
-from dcv_benchmark.data_factory.builder import DatasetBuilder
+from dcv_benchmark.data_factory.bipia.bipia import BipiaBuilder
 from dcv_benchmark.data_factory.downloader import download_bipia, download_squad
 from dcv_benchmark.data_factory.injector import AttackInjector
 from dcv_benchmark.data_factory.loaders import SquadLoader
+from dcv_benchmark.data_factory.squad.squad_builder import SquadBuilder
 from dcv_benchmark.models.bipia_config import BipiaConfig
 from dcv_benchmark.models.data_factory import DataFactoryConfig
-from dcv_benchmark.models.dataset import Dataset, DatasetMetadata
+from dcv_benchmark.models.dataset import Dataset, DatasetMeta
 from dcv_benchmark.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -85,10 +86,10 @@ def build_data(
     if is_bipia:
         _build_bipia(raw_yaml, name, overwrite)
     else:
-        _build_standard(raw_yaml, name, overwrite)
+        _build_squad(raw_yaml, name, overwrite)
 
 
-def _build_bipia(raw_config: dict, name: str | None, overwrite: bool) -> None:
+def _build_bipia(raw_config: dict[str, Any], name: str | None, overwrite: bool) -> None:
     """Handler for BIPIA datasets."""
     try:
         config = BipiaConfig(**raw_config)
@@ -120,10 +121,13 @@ def _build_bipia(raw_config: dict, name: str | None, overwrite: bool) -> None:
 
         # Wrap in Standard Dataset Object for compatibility with Runner
         dataset = Dataset(
-            meta=DatasetMetadata(
+            meta=DatasetMeta(
                 name=dataset_name,
                 version="1.0.0",
-                description=f"BIPIA Benchmark (Tasks: {config.tasks}, Pos: {config.injection_pos})",
+                description=(
+                    f"BIPIA Benchmark (Tasks: {config.tasks}, Pos: "
+                    f"{config.injection_pos})"
+                ),
                 author="Deconvolute / Microsoft BIPIA",
             ),
             samples=raw_samples,
@@ -146,7 +150,7 @@ def _build_bipia(raw_config: dict, name: str | None, overwrite: bool) -> None:
 
 
 # TODO: REname to squad dataest
-def _build_standard(raw_config: dict, name: str | None, overwrite: bool) -> None:
+def _build_squad(raw_config: dict[str, Any], name: str | None, overwrite: bool) -> None:
     """Handler for Standard (SQuAD/Canary) datasets."""
     try:
         config = DataFactoryConfig(**raw_config)
@@ -168,7 +172,7 @@ def _build_standard(raw_config: dict, name: str | None, overwrite: bool) -> None
     try:
         loader = SquadLoader()
         injector = AttackInjector(config)
-        builder = DatasetBuilder(loader=loader, injector=injector, config=config)
+        builder = SquadBuilder(loader=loader, injector=injector, config=config)
         dataset = builder.build()
         builder.save(dataset, output_file)
 

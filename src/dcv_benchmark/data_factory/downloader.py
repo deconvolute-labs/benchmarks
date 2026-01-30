@@ -3,7 +3,7 @@ from pathlib import Path
 
 import httpx
 
-from dcv_benchmark.data_factory.squad import fetch_squad_subset
+from dcv_benchmark.data_factory.squad.squad import fetch_squad_subset
 
 logger = logging.getLogger(__name__)
 
