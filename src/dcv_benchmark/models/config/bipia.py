@@ -11,8 +11,9 @@ class BipiaConfig(BaseModel):
     dataset_name: str = Field("bipia_v1", description="Name of the output dataset.")
     type: Literal["bipia"] = Field("bipia", description="Dataset type.")
 
-    tasks: list[Literal["email", "code", "table", "qa"]] = Field(
-        default=["email", "code", "table", "qa"],
+    # We don't support 'qa' currently because it requires a license and stuff.
+    tasks: list[Literal["email", "code", "table"]] = Field(
+        default=["email", "code", "table"],
         description="List of BIPIA tasks to include.",
     )
 
@@ -23,4 +24,4 @@ class BipiaConfig(BaseModel):
     max_samples: int | None = Field(
         None, description="Limit number of samples per task."
     )
-    seed: int = Field(42, description="Random seed.")
+    seed: int = Field(81, description="Random seed.")

@@ -8,6 +8,7 @@ class DataFactoryConfig(BaseModel):
     Configuration for the Data Factory pipeline.
 
     This config defines how a raw corpus is transformed into a malicious RAG dataset.
+    The raw corpus is currently only based on the SQuAD dataset.
     It is typically loaded from `data/datasets/<name>/config.yaml`.
     """
 
@@ -20,7 +21,7 @@ class DataFactoryConfig(BaseModel):
         ..., description="Human-readable description of the dataset's purpose."
     )
     author: str = Field(
-        "Deconvolute Benchmark", description="Creator of this dataset configuration."
+        "Deconvolute Labs", description="Creator of this dataset configuration."
     )
 
     @field_validator("description")
@@ -32,7 +33,8 @@ class DataFactoryConfig(BaseModel):
     source_file: str = Field(
         ...,
         description=(
-            "Path to input corpus file (e.g. 'data/corpus/squad_subset_300.json')."
+            "Path to input corpus file "
+            "(e.g. 'workspace/datasets/raw/squad/squad_subset_300.json')."
         ),
     )
 
@@ -109,7 +111,7 @@ class RawSample(BaseModel):
     """
     Data Transfer Object representing a single item from a raw corpus.
 
-    Loaders must convert their specific source format (SQuAD, CSV) into this structure
+    Loaders must convert their specific source format (SQuAD, BIPIA) into this structure
     before the Data Factory can process it.
     """
 
