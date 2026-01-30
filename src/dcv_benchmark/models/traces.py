@@ -30,7 +30,7 @@ class TraceItem(BaseModel):
     )
 
     # The user input for this specific run
-    user_query: str
+    user_query: str | None = None
 
     # The full execution result (contains output + used_context + defense signals)
     response: TargetResponse

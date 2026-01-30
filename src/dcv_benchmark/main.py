@@ -1,37 +1,48 @@
 import argparse
+import sys
 
-from dcv_benchmark.cli.data import register_data_cli
-from dcv_benchmark.cli.run import register_run_cli
-from dcv_benchmark.utils.logger import setup_logger
+from dcv_benchmark.cli.commands.data import register_data_commands
+from dcv_benchmark.cli.commands.experiment import register_experiment_commands
+from dcv_benchmark.utils.logger import setup_logging
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Deconvolute Benchmark: Security Evaluation"
-    )
-
-    # Global arguments
-    parser.add_argument(
+    # Create a parent parser for global arguments
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument(
         "--debug", action="store_true", help="Enable debug logging globally."
     )
 
+    # Setup the main parser
+    parser = argparse.ArgumentParser(
+        prog="dcv-benchmark",
+        description=(
+            "Deconvolute AI Benchmarking Tool\n"
+            "Evaluate RAG security and robustness against adversarial attacks."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        parents=[parent_parser],  # Allow --debug at root level too
+    )
+
+    # Create subparsers for the top-level commands
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # Register subcommands
-    register_run_cli(subparsers)
-    register_data_cli(subparsers)
+    # Register modules, passing the parent_parser to inherit flags
+    register_data_commands(subparsers, parent_parser)
+    register_experiment_commands(subparsers, parent_parser)
 
+    # Parse arguments
     args = parser.parse_args()
 
-    # Pre-initialize logger for CLI parsing phases if needed,
-    # though individual handlers (run/data) often re-init to set specific levels.
-    if args.command == "data":
-        setup_logger(level="DEBUG" if args.debug else "INFO")
+    # Setup logging based on the parsed debug flag
+    setup_logging(level="DEBUG" if args.debug else "INFO")
 
+    # Execute the mapped function
     if hasattr(args, "func"):
         args.func(args)
     else:
         parser.print_help()
+        sys.exit(1)
 
 
 if __name__ == "__main__":

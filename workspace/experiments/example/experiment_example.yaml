@@ -3,7 +3,6 @@ experiment:
   description: "An example of a full config file."
 
   # Optional. By default points to 'workspace/datasets/built/<name>/dataset.json'
-  # Or provide a direct path ending in .json
   input:
     dataset_name: "workspace/experiments/example/dataset.json"
 
@@ -75,4 +74,4 @@ experiment:
 
   # For tagging
   scenario:
-    id: "prompt_leakage"
+    id: "my-tag"

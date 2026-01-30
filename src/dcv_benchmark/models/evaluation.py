@@ -8,7 +8,6 @@ class BaseEvaluationResult(BaseModel):
     The minimum contract every evaluation must fulfill.
     """
 
-    # TODO
     type: Literal["generic", "security"] = Field(
         ..., description="Type of evaluation result."
     )

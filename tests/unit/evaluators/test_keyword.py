@@ -90,9 +90,6 @@ class TestKeywordEvaluator:
         Verifies that tokens with special regex characters (like dots)
         are handled correctly via re.escape, while respecting word boundaries.
         """
-        # We use 'SYSTEM.OVERRIDE' (without brackets) because \b (word boundary)
-        # requires the token to start/end with a word character (alphanumeric).
-        # The dot (.) tests that re.escape prevents it from matching 'SYSTEMxOVERRIDE'.
         token = "SYSTEM.OVERRIDE"
         evaluator = KeywordEvaluator(target_keyword=token)
 

@@ -15,7 +15,7 @@ from dcv_benchmark.models.dataset import (
 )
 from dcv_benchmark.utils.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 class DatasetBuilder:
@@ -60,7 +60,7 @@ class DatasetBuilder:
 
         self.retriever.index(documents=kb_docs, ids=kb_ids)
 
-        # 3. Generate Samples
+        # Generate Samples
         benchmark_samples = []
         attack_count = 0
 

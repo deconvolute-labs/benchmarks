@@ -15,19 +15,16 @@ class DatasetLoader:
         1. If it ends safely in .json, checks if it exists as a path.
         2. Else, assumes it's a directory name in BUILT_DATASETS_DIR/name/dataset.json.
         """
-        # 1. Direct path check (backward compatibility)
+        # Direct path check (backward compatibility)
         if name.endswith(".json"):
             direct_path = Path(name)
             if direct_path.exists():
                 return direct_path
 
-        # 2. Convention-based check
+        # Convention-based check
         # workspace/datasets/built/{name}/dataset.json
         candidate = BUILT_DATASETS_DIR / name / "dataset.json"
 
-        # If the candidate doesn't exist, we fallback to just returning it
-        # so valid file-not-found error raises in .load() or we can check here.
-        # But let's check here to return the most helpful path for the error message.
         if candidate.exists():
             return candidate
 

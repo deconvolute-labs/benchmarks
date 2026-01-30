@@ -5,35 +5,57 @@ from typing import Any
 from deconvolute import __version__ as dcv_version
 
 
-def setup_logger(name: str = "dcv_benchmark", level: str = "INFO") -> logging.Logger:
+class CustomFormatter(logging.Formatter):
     """
-    Configures and returns the centralized logger.
+    Formatter that shows the logger name only in DEBUG mode.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.debug_formatter = logging.Formatter(
+            "[%(levelname)s] %(asctime)s %(name)s %(message)s", datefmt="%H:%M:%S"
+        )
+        self.default_formatter = logging.Formatter(
+            "[%(levelname)s] %(asctime)s %(message)s", datefmt="%H:%M:%S"
+        )
+
+    def format(self, record: logging.LogRecord) -> str:
+        if record.levelno == logging.DEBUG:
+            return self.debug_formatter.format(record)
+        return self.default_formatter.format(record)
+
+
+def setup_logging(level: str | int = "INFO") -> None:
+    """
+    Configures the root logger.
+    Should be called once at the application entry point.
 
     Args:
-        name: The name of the logger (default: 'dcv_benchmark').
-        level: Logging level (DEBUG, INFO, WARNING, ERROR).
+        level: The logging level (e.g. "DEBUG", "INFO").
     """
-    logger = logging.getLogger(name)
-    logger.setLevel(level.upper())
+    # Convert string level to int if necessary
+    if isinstance(level, str):
+        level = level.upper()
 
-    # Prevent adding duplicate handlers if setup is called multiple times
-    if logger.hasHandlers():
-        return logger
-
-    # Console Handler (Stdout)
+    # Create handler with custom formatter
     handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(level.upper())
+    handler.setFormatter(CustomFormatter())
 
-    formatter = logging.Formatter(fmt="[%(levelname)s] %(message)s", datefmt="%H:%M:%S")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    # Basic configuration for the root logger
+    logging.basicConfig(
+        level=level,
+        handlers=[handler],
+        force=True,  # Overwrite any existing config (useful for testing/notebooks)
+    )
 
-    return logger
+    # Quiet down some noisy 3rd party libraries if they exist
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("chromadb").setLevel(logging.WARNING)
 
 
-def get_logger(name: str = "dcv_benchmark") -> logging.Logger:
+def get_logger(name: str) -> logging.Logger:
     """
-    Helper to get the configured logger instance in other modules.
+    Returns a logger instance with the given name.
     """
     return logging.getLogger(name)
 
@@ -42,7 +64,7 @@ def print_experiment_header(config: dict[str, Any]) -> None:
     """
     Logs a standardized visual header for the experiment startup.
     """
-    logger = get_logger()
+    logger = get_logger(__name__)
 
     name = config.get("name", "Unnamed Experiment")
     version = config.get("version", "N/A")
@@ -66,7 +88,7 @@ def print_run_summary(
     """
     Logs the final summary statistics of a benchmark run.
     """
-    logger = get_logger()
+    logger = get_logger(__name__)
     failed = total - success
     pass_rate = (success / total * 100) if total > 0 else 0.0
 
@@ -90,7 +112,7 @@ def print_dataset_header(config: dict[str, Any]) -> None:
     corpus = config.get("source_file", "N/A")
     rate = config.get("attack_rate", 0.0)
 
-    logger = get_logger()
+    logger = get_logger(__name__)
 
     logger.info("")
     logger.info("=" * 90)
