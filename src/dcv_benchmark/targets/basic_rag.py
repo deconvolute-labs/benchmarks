@@ -1,9 +1,10 @@
-from deconvolute.detectors import (
+from deconvolute import (
     CanaryDetector,
-    CanaryResult,
     LanguageDetector,
-    LanguageResult,
 )
+from deconvolute.detectors.content.language.models import LanguageResult
+from deconvolute.detectors.content.signature.engine import SignatureDetector
+from deconvolute.detectors.integrity.canary.models import CanaryResult
 
 from dcv_benchmark.components.llms import BaseLLM, create_llm
 from dcv_benchmark.components.vector_store import create_vector_store
@@ -51,28 +52,33 @@ class BasicRAG(BaseTarget):
             logger.debug("No Retriever configured. Running in Generator-only mode.")
 
         # Setup Deconvolute defense
+        # 1. Canary Defense (LLM Input/Output Layer)
         self.canary = CanaryDetector()
-        self.canary_enabled = False  # For tracking
-
-        # We allow for a flexible language detector slot
-        self.language_detector: LanguageDetector | None = None
-
-        # Check for explicit defense layers in the new config structure
+        self.canary_enabled = False
         if config.defense.canary and config.defense.canary.enabled:
             self.canary_enabled = True
-            log_msg = "Deconvolute Canary defense ENABLED."
-            if config.defense.canary.settings:
-                log_msg += f" Settings: {config.defense.canary.settings}"
-            logger.info(log_msg)
+            logger.info(
+                f"Defense [Canary]: ENABLED. Settings: {config.defense.canary.settings}"
+            )
 
+        # 2. Language Defense (Output Layer)
+        self.language_detector: LanguageDetector | None = None
         if config.defense.language and config.defense.language.enabled:
-            # Initialize with settings from YAML (e.g. allowed_languages=['en'])
             self.language_detector = LanguageDetector(
                 **config.defense.language.settings
             )
             logger.info(
-                "Deconvolute Language defense ENABLED. "
-                f"Config: {config.defense.language.settings}"
+                "Defense [Language]: ENABLED. Config: "
+                f"{config.defense.language.settings}"
+            )
+
+        # 3. Signature Defense (Ingestion Layer - YARA)
+        self.signature_detector: SignatureDetector | None = None
+        if config.defense.yara and config.defense.yara.enabled:
+            self.signature_detector = SignatureDetector(**config.defense.yara.settings)
+            logger.info(
+                "Defense [Signature/YARA]: ENABLED. Config: "
+                f"{config.defense.yara.settings}"
             )
 
         # Load system prompt
@@ -93,6 +99,7 @@ class BasicRAG(BaseTarget):
 
         This method is idempotent-ish for the benchmark run (adds to the ephemeral DB).
         If no vector store is configured, this operation logs a warning and skips.
+        Applies Ingestion-side defenses (YARA, ML) if enabled.
 
         Args:
             documents: A list of text strings (knowledge base) to index.
@@ -101,8 +108,37 @@ class BasicRAG(BaseTarget):
             logger.warning("Ingest called but no Vector Store is configured. Skipping.")
             return
 
-        logger.info(f"Ingesting {len(documents)} documents...")
-        self.vector_store.add_documents(documents)
+        safe_documents = []
+        blocked_count = 0
+        total_docs = len(documents)
+
+        logger.info(f"Starting ingestion scan for {total_docs} documents...")
+
+        for doc in documents:
+            is_clean = True
+
+            # Check 1: Signature / YARA
+            if self.signature_detector:
+                result = self.signature_detector.check(doc)
+                if result.threat_detected:
+                    is_clean = False
+                    logger.debug(
+                        "Doc blocked by SignatureDetector: "
+                        f"{getattr(result, 'metadata', 'N/A')}"
+                    )
+
+            if is_clean:
+                safe_documents.append(doc)
+            else:
+                blocked_count += 1
+
+        logger.info(
+            f"Ingestion Scan Complete: {len(safe_documents)} accepted, "
+            f"{blocked_count} blocked (Threats)."
+        )
+
+        if safe_documents:
+            self.vector_store.add_documents(safe_documents)
 
     def invoke(
         self,

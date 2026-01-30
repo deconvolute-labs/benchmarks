@@ -131,4 +131,5 @@ cython_debug/
 # App
 workspace/datasets/built/*/*.json
 workspace/datasets/raw/squad/*.json
+workspace/datasets/raw/bipia/
 workspace/experiments/archive/

@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dcv_benchmark.data_factory.builder import DatasetBuilder
+from dcv_benchmark.data_factory.squad.squad_builder import SquadBuilder
 from dcv_benchmark.models.data_factory import DataFactoryConfig, RawSample
 from dcv_benchmark.models.dataset import Dataset
 
@@ -42,7 +42,9 @@ def mock_injector():
 
 @pytest.fixture
 def mock_retriever_class():
-    with patch("dcv_benchmark.data_factory.builder.EphemeralRetriever") as MockClass:
+    with patch(
+        "dcv_benchmark.data_factory.squad.squad_builder.EphemeralRetriever"
+    ) as MockClass:
         yield MockClass
 
 
@@ -60,7 +62,7 @@ def test_build_workflow(mock_config, mock_loader, mock_injector, mock_retriever_
     # Force Attack Rate to 1.0 to ensure injection happens
     mock_config.attack_rate = 1.0
 
-    builder = DatasetBuilder(mock_loader, mock_injector, mock_config)
+    builder = SquadBuilder(mock_loader, mock_injector, mock_config)
     dataset = builder.build()
 
     # Verify Loader Interaction
@@ -108,7 +110,7 @@ def test_gold_chunk_always_present(
         "Distractor C",
     ]
 
-    builder = DatasetBuilder(mock_loader, mock_injector, mock_config)
+    builder = SquadBuilder(mock_loader, mock_injector, mock_config)
     dataset = builder.build()
 
     sample = dataset.samples[0]
@@ -129,7 +131,7 @@ def test_attack_rate_zero(
     mock_retriever_instance = mock_retriever_class.return_value
     mock_retriever_instance.query.return_value = ["Gold1", "D1", "D2"]
 
-    builder = DatasetBuilder(mock_loader, mock_injector, mock_config)
+    builder = SquadBuilder(mock_loader, mock_injector, mock_config)
     dataset = builder.build()
 
     for sample in dataset.samples:
@@ -147,7 +149,7 @@ def test_save_dataset(
     mock_instance = mock_retriever_class.return_value
     mock_instance.query.return_value = ["Doc A", "Doc B", "Doc C"]
 
-    builder = DatasetBuilder(mock_loader, mock_injector, mock_config)
+    builder = SquadBuilder(mock_loader, mock_injector, mock_config)
     dataset = builder.build()
 
     output_path = tmp_path / "dataset.json"

@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dcv_benchmark.data_factory.builder import DatasetBuilder
+from dcv_benchmark.data_factory.squad.squad_builder import SquadBuilder
 from dcv_benchmark.models.data_factory import DataFactoryConfig, RawSample
 
 
@@ -38,7 +38,9 @@ def mock_injector():
 
 @pytest.fixture
 def mock_retriever_class():
-    with patch("dcv_benchmark.data_factory.builder.EphemeralRetriever") as MockClass:
+    with patch(
+        "dcv_benchmark.data_factory.squad.squad_builder.EphemeralRetriever"
+    ) as MockClass:
         yield MockClass
 
 
@@ -58,7 +60,7 @@ def test_gold_in_retrieved_k_plus_one(
     # Update config to ensure we are testing k=3 behavior
     mock_config.retrieval_k = 3
 
-    builder = DatasetBuilder(mock_loader, mock_injector, mock_config)
+    builder = SquadBuilder(mock_loader, mock_injector, mock_config)
     dataset = builder.build()
 
     sample = dataset.samples[0]
@@ -91,7 +93,7 @@ def test_gold_missing_from_retrieved(
     mock_instance.query.return_value = ["D1", "D2", "D3", "D4"]
     mock_config.retrieval_k = 3
 
-    builder = DatasetBuilder(mock_loader, mock_injector, mock_config)
+    builder = SquadBuilder(mock_loader, mock_injector, mock_config)
     dataset = builder.build()
 
     sample = dataset.samples[0]
@@ -118,7 +120,7 @@ def test_gold_is_top_1(mock_config, mock_loader, mock_injector, mock_retriever_c
     mock_instance.query.return_value = ["GOLD_CONTENT", "D1", "D2", "D3"]
     mock_config.retrieval_k = 3
 
-    builder = DatasetBuilder(mock_loader, mock_injector, mock_config)
+    builder = SquadBuilder(mock_loader, mock_injector, mock_config)
     dataset = builder.build()
 
     sample = dataset.samples[0]

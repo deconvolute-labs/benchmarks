@@ -14,6 +14,7 @@ class DataFactoryConfig(BaseModel):
     dataset_name: str = Field(
         ..., description="Unique identifier for the generated dataset."
     )
+    type: Literal["squad"] = Field("squad", description="Dataset type.")
     version: str = Field("1.0.0", description="Semantic version of this dataset build.")
     description: str = Field(
         ..., description="Human-readable description of the dataset's purpose."

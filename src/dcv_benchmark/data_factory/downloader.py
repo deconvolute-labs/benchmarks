@@ -3,7 +3,7 @@ from pathlib import Path
 
 import httpx
 
-from dcv_benchmark.data_factory.squad import fetch_squad_subset
+from dcv_benchmark.data_factory.squad.squad import fetch_squad_subset
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +45,15 @@ def download_bipia(output_dir: Path) -> None:
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Note: In table 2 on page 4, these are named differently than in the code.
+    # The names from the paper are in the comments.
     files_to_fetch = {
-        "benchmark/email/test.jsonl": "test_email.jsonl",
-        "benchmark/code/test.jsonl": "test_code.jsonl",
+        "benchmark/email/test.jsonl": "test_email.jsonl",  # Email QA
+        "benchmark/code/test.jsonl": "test_code.jsonl",  # Code QA
+        # We have to skip this for now due to licensing issues which don't seem allow
+        # this to be hosted by BIPIA directly.
+        "benchmark/table/test.jsonl": "test_table.jsonl",  # Table QA
+        # "benchmark/qa/index.json": "test_qa.json",  # Web QA
         "benchmark/text_attack_test.json": "attacks_text.json",
         "benchmark/code_attack_test.json": "attacks_code.json",
     }

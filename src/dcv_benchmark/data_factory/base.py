@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from dcv_benchmark.models.data_factory import RawSample
 
@@ -50,5 +51,21 @@ class BaseInjector(ABC):
 
         Returns:
             The modified text string containing the attack.
+        """
+        pass
+
+
+class BaseDatasetBuilder(ABC):
+    """
+    Abstract Base Class for Dataset Builders.
+    """
+
+    @abstractmethod
+    def build(self, **kwargs: Any) -> Any:
+        # TODO: The return type should ideally be `Dataset` but we need to
+        # TODO: resolve circular imports
+        # or use ForwardRef / 'Dataset'. For now `Any` is permissive.
+        """
+        Builds and returns the dataset.
         """
         pass

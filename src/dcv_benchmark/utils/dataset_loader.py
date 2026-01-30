@@ -2,7 +2,11 @@ import json
 from pathlib import Path
 
 from dcv_benchmark.constants import BUILT_DATASETS_DIR
-from dcv_benchmark.models.dataset import Dataset
+from dcv_benchmark.models.dataset import (
+    BaseDataset,
+    BipiaDataset,
+    SquadDataset,
+)
 
 
 class DatasetLoader:
@@ -30,7 +34,7 @@ class DatasetLoader:
 
         return candidate if not name.endswith(".json") else Path(name)
 
-    def load(self) -> Dataset:
+    def load(self) -> BaseDataset:
         """
         Reads the JSON file, validates it, and returns a Pydantic Dataset object.
 
@@ -47,4 +51,21 @@ class DatasetLoader:
             except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON in dataset file: {e}") from e
 
-        return Dataset(**raw_data)
+        # Determine type
+        meta = raw_data.get("meta")
+        if not meta:
+            meta = {}
+            raw_data["meta"] = meta
+
+        dataset_type = meta.get("type")
+
+        if dataset_type == "bipia":
+            return BipiaDataset(**raw_data)
+        elif dataset_type == "squad":
+            return SquadDataset(**raw_data)
+
+        # Fallback/Default
+        # If no type, we assume it's a legacy SQuAD/Canary dataset or generic
+        # We inject the type to satisfy the strict schema
+        meta["type"] = "squad"
+        return SquadDataset(**raw_data)
