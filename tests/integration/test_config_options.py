@@ -56,6 +56,7 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
     ds_content = {
         "meta": {
             "name": dataset_name,
+            "type": "squad",
             "version": "1.0",
             "description": "Test DS",
             "author": "tester",
@@ -134,6 +135,7 @@ def test_debug_traces_flag(
     mock_dataset = Dataset(
         meta=DatasetMeta(
             name="test",
+            type="squad",
             version="1",
             description="desc",
             author="tester",

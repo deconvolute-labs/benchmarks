@@ -12,7 +12,7 @@ from dcv_benchmark.evaluators.canary import CanaryEvaluator
 from dcv_benchmark.evaluators.keyword import KeywordEvaluator
 from dcv_benchmark.evaluators.language import LanguageMismatchEvaluator
 from dcv_benchmark.models.config.experiment import EvaluatorConfig, ExperimentConfig
-from dcv_benchmark.models.dataset import Dataset
+from dcv_benchmark.models.dataset import BaseDataset
 from dcv_benchmark.targets.basic_rag import BasicRAG
 from dcv_benchmark.targets.basic_rag_guard import BasicRAGGuard
 from dcv_benchmark.utils.dataset_loader import DatasetLoader
@@ -21,7 +21,7 @@ from dcv_benchmark.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def load_dataset(experiment_config: ExperimentConfig) -> Dataset:
+def load_dataset(experiment_config: ExperimentConfig) -> BaseDataset:
     """Loads dataset based on config or default path."""
     dataset_path_or_name = experiment_config.input.dataset_name
     if not dataset_path_or_name:
@@ -39,7 +39,7 @@ def load_dataset(experiment_config: ExperimentConfig) -> Dataset:
         logger.info(f"No dataset provided. Using default path: {fallback_path}")
         dataset_path_or_name = str(fallback_path)
 
-    dataset: Dataset = DatasetLoader(dataset_path_or_name).load()
+    dataset: BaseDataset = DatasetLoader(dataset_path_or_name).load()
     logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
     logger.info(f"Description: {dataset.meta.description}")
     return dataset
@@ -59,7 +59,7 @@ def create_target(experiment_config: ExperimentConfig) -> BasicRAG | BasicRAGGua
         )
 
 
-def _validate_baseline_payload(dataset: Dataset) -> None:
+def _validate_baseline_payload(dataset: BaseDataset) -> None:
     """Helper to validate dataset payload for Keyword evaluation."""
     attack_info = dataset.meta.attack_info
     if not attack_info:
@@ -84,7 +84,9 @@ def _validate_baseline_payload(dataset: Dataset) -> None:
 
 
 def create_evaluator(
-    config: EvaluatorConfig | None, target: Any = None, dataset: Dataset | None = None
+    config: EvaluatorConfig | None,
+    target: Any = None,
+    dataset: BaseDataset | None = None,
 ) -> BaseEvaluator:
     """Creates the evaluator instance."""
     if config is None:

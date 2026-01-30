@@ -12,7 +12,10 @@ from dcv_benchmark.data_factory.loaders import SquadLoader
 from dcv_benchmark.data_factory.squad.squad_builder import SquadBuilder
 from dcv_benchmark.models.bipia_config import BipiaConfig
 from dcv_benchmark.models.data_factory import DataFactoryConfig
-from dcv_benchmark.models.dataset import Dataset, DatasetMeta
+from dcv_benchmark.models.dataset import (
+    BipiaDataset,
+    DatasetMeta,
+)
 from dcv_benchmark.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -81,12 +84,25 @@ def build_data(
         sys.exit(1)
 
     # 2. Branch Logic
-    is_bipia = "tasks" in raw_yaml  # 'tasks' is unique to BipiaConfig
+    dataset_type = raw_yaml.get("type")
 
-    if is_bipia:
+    if not dataset_type:
+        # Fallback for legacy configs that haven't been migrated yet
+        # We'll infer based on 'tasks' for now but warn
+        if "tasks" in raw_yaml:
+            logger.warning("Config missing 'type', inferring 'bipia' from 'tasks'.")
+            dataset_type = "bipia"
+        else:
+            logger.warning("Config missing 'type', inferring 'squad'.")
+            dataset_type = "squad"
+
+    if dataset_type == "bipia":
         _build_bipia(raw_yaml, name, overwrite)
-    else:
+    elif dataset_type == "squad":
         _build_squad(raw_yaml, name, overwrite)
+    else:
+        logger.error(f"Unknown dataset type: '{dataset_type}'. Options: bipia, squad")
+        sys.exit(1)
 
 
 def _build_bipia(raw_config: dict[str, Any], name: str | None, overwrite: bool) -> None:
@@ -120,9 +136,10 @@ def _build_bipia(raw_config: dict[str, Any], name: str | None, overwrite: bool) 
         )
 
         # Wrap in Standard Dataset Object for compatibility with Runner
-        dataset = Dataset(
+        dataset = BipiaDataset(
             meta=DatasetMeta(
                 name=dataset_name,
+                type="bipia",
                 version="1.0.0",
                 description=(
                     f"BIPIA Benchmark (Tasks: {config.tasks}, Pos: "
@@ -149,7 +166,6 @@ def _build_bipia(raw_config: dict[str, Any], name: str | None, overwrite: bool) 
         sys.exit(1)
 
 
-# TODO: REname to squad dataest
 def _build_squad(raw_config: dict[str, Any], name: str | None, overwrite: bool) -> None:
     """Handler for Standard (SQuAD/Canary) datasets."""
     try:

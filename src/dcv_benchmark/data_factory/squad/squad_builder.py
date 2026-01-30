@@ -11,11 +11,12 @@ from dcv_benchmark.data_factory.retrieval import EphemeralRetriever
 from dcv_benchmark.models.data_factory import DataFactoryConfig
 from dcv_benchmark.models.dataset import (
     AttackInfo,
+    BaseDataset,
     BenchmarkSample,
     ContextChunk,
     CorpusInfo,
-    Dataset,
     DatasetMeta,
+    SquadDataset,
 )
 from dcv_benchmark.utils.logger import get_logger
 
@@ -49,7 +50,7 @@ class SquadBuilder(BaseDatasetBuilder):
         self.config = config
         self.retriever = EphemeralRetriever()
 
-    def build(self) -> Dataset:  # type: ignore[override]
+    def build(self) -> SquadDataset:  # type: ignore[override]
         """
         Executes the build pipeline and returns the constructed Dataset.
         """
@@ -162,9 +163,10 @@ class SquadBuilder(BaseDatasetBuilder):
         )
 
         # 4. Construct Final Dataset
-        return Dataset(
+        return SquadDataset(
             meta=DatasetMeta(
                 name=self.config.dataset_name,
+                type="squad",
                 version=self.config.version,
                 description=self.config.description,
                 author=self.config.author,
@@ -189,7 +191,7 @@ class SquadBuilder(BaseDatasetBuilder):
             samples=benchmark_samples,
         )
 
-    def save(self, dataset: Dataset, output_path: str | Path) -> None:
+    def save(self, dataset: BaseDataset, output_path: str | Path) -> None:
         """Helper to save the dataset to JSON."""
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)

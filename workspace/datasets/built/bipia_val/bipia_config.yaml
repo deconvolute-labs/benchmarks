@@ -1,0 +1,9 @@
+dataset_name: bipia_v1
+type: bipia
+tasks:
+- email
+- code
+- table
+injection_pos: end
+max_samples: 50
+seed: 42

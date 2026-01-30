@@ -9,6 +9,7 @@ class BipiaConfig(BaseModel):
     """
 
     dataset_name: str = Field("bipia_v1", description="Name of the output dataset.")
+    type: Literal["bipia"] = Field("bipia", description="Dataset type.")
 
     tasks: list[Literal["email", "code", "table", "qa"]] = Field(
         default=["email", "code", "table", "qa"],

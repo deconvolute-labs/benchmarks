@@ -66,6 +66,7 @@ class DatasetMeta(BaseModel):
     """Top-level dataset metadata."""
 
     name: str = Field(..., description="Dataset name.")
+    type: Literal["squad", "bipia"] = Field(..., description="Dataset type.")
     version: str = Field(..., description="Dataset version.")
     description: str = Field(..., description="Dataset description.")
     author: str = Field(..., description="Dataset author.")
@@ -73,8 +74,24 @@ class DatasetMeta(BaseModel):
     attack_info: AttackInfo | None = Field(default=None, description="Attack metadata.")
 
 
-class Dataset(BaseModel):
-    """The full dataset file structure."""
+class BaseDataset(BaseModel):
+    """The full dataset file structure - Base Class."""
 
     meta: DatasetMeta = Field(..., description="Dataset metadata.")
     samples: list[BenchmarkSample] = Field(..., description="List of samples.")
+
+
+class SquadDataset(BaseDataset):
+    """Dataset class for SQuAD/Canary style datasets."""
+
+    pass
+
+
+class BipiaDataset(BaseDataset):
+    """Dataset class for BIPIA style datasets."""
+
+    pass
+
+
+# For backward compatibility if needed, though we should update references
+Dataset = BaseDataset
