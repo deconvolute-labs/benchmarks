@@ -46,8 +46,9 @@ class BaseTarget(ABC):
 
         Args:
             user_query (str): The final user input string (e.g. a question or command).
-            system_prompt (str | None, optional): An override for the system instruction.
-                If None, the target uses its configured default system prompt.
+            system_prompt (str | None, optional): An override for the system
+                instruction. If None, the target uses its configured default system
+                prompt.
             forced_context (list[str] | None, optional): A list of context strings to
                 inject directly into the prompt, bypassing the retrieval step.
                 Used to test Generator robustness in isolation or to simulate

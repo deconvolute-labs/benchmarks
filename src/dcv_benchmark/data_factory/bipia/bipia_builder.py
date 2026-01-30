@@ -47,7 +47,7 @@ class BipiaBuilder(BaseDatasetBuilder):
 
     def build(  # type: ignore[override]
         self,
-        tasks: list[Literal["email", "code", "table", "qa"]],  # We exclude qa for now
+        tasks: list[Literal["email", "code", "table"]],  # We exclude qa for now
         injection_pos: Literal["start", "middle", "end"] = "end",
         max_samples: int | None = None,
     ) -> list[BenchmarkSample]:

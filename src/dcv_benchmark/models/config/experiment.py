@@ -14,7 +14,7 @@ class SquadInputConfig(BaseModel):
 
 class BipiaInputConfig(BaseModel):
     type: Literal["bipia"] = Field(..., description="Type of dataset.")
-    tasks: list[Literal["email", "code", "table", "qa"]] = Field(
+    tasks: list[Literal["email", "code", "table"]] = Field(
         ..., description="BIPIA tasks to generate."
     )
     injection_pos: Literal["start", "middle", "end"] = Field(

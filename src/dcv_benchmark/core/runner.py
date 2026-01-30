@@ -48,11 +48,11 @@ class ExperimentRunner:
                 content is redacted to save space and reduce noise. Defaults to False.
 
         Returns:
-            Path: The directory path where the run artifacts (results.json, traces, plots)
+            Path: Directory path where the run artifacts (results.json, traces, plots)
             have been saved.
 
         Raises:
-            ValueError: If the dataset fails to load or the target cannot be initialized.
+            ValueError: If the dataset fails to load or the target cannot be initialized
         """
         start_time = datetime.datetime.now()
         run_id = start_time.strftime(TIMESTAMP_FORMAT)
