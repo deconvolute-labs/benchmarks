@@ -1,6 +1,7 @@
 import re
-from typing import Any
+from typing import Any, cast
 
+from dcv_benchmark.components.llms import BaseLLM, create_llm
 from dcv_benchmark.constants import (
     AVAILABLE_EVALUATORS,
     BASELINE_TARGET_KEYWORD,
@@ -54,31 +55,35 @@ def load_dataset(experiment_config: ExperimentConfig) -> BaseDataset:
         return dataset
 
     # -- Case 2: SQuAD / Standard (Load from disk) --
-    # input_config is SquadInputConfig
-    dataset_name = input_config.dataset_name
-    if not dataset_name:
-        # Fallback: Use Experiment Name
-        logger.info(
-            "No dataset name in config. Attempting fallback to experiment name."
-        )
-        dataset_name = experiment_config.name
+    elif input_config.type == "squad":
+        # input_config is SquadInputConfig
+        dataset_name = input_config.dataset_name
+        if not dataset_name:
+            # Fallback: Use Experiment Name
+            logger.info(
+                "No dataset name in config. Attempting fallback to experiment name."
+            )
+            dataset_name = experiment_config.name
 
-    fallback_path = BUILT_DATASETS_DIR / dataset_name / "dataset.json"
+        fallback_path = BUILT_DATASETS_DIR / dataset_name / "dataset.json"
 
-    # Try loading via loader (which handles resolution)
-    try:
-        dataset: BaseDataset = DatasetLoader(dataset_name).load()  # type: ignore
-    except FileNotFoundError:
-        # Retry with direct fallback path to be helpful
-        if fallback_path.exists():
-            logger.info(f"Using fallback path: {fallback_path}")
-            dataset = DatasetLoader(str(fallback_path)).load()  # type: ignore
-        else:
-            raise
+        # Try loading via loader (which handles resolution)
+        try:
+            dataset: BaseDataset = DatasetLoader(dataset_name).load()  # type: ignore
+        except FileNotFoundError:
+            # Retry with direct fallback path to be helpful
+            if fallback_path.exists():
+                logger.info(f"Using fallback path: {fallback_path}")
+                dataset = DatasetLoader(str(fallback_path)).load()  # type: ignore
+            else:
+                raise
 
-    logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
-    logger.info(f"Description: {dataset.meta.description}")
-    return dataset
+        logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
+        logger.info(f"Description: {dataset.meta.description}")
+        return dataset
+
+    else:
+        raise ValueError(f"Unknown input config type: {input_config.type}")
 
 
 def create_target(experiment_config: ExperimentConfig) -> BasicRAG | BasicRAGGuard:
@@ -159,11 +164,31 @@ def create_evaluator(
             raise e
     elif config.type == "bipia":
         logger.info("Evaluator: BIPIA (LLM Judge + Pattern Match)")
-        judge_llm = getattr(target, "llm", None)
-        if not judge_llm:
-            logger.warning(
-                "BIPIA Evaluator initialized without an LLM! Text tasks will fail."
+
+        judge_llm: BaseLLM | None = None
+
+        # Priority 1: Use explicit evaluator LLM config
+        if config.llm:
+            logger.info("Using explicit LLM config for BIPIA Judge.")
+            judge_llm = create_llm(config.llm)
+
+        # Priority 2: Fallback to Target's LLM (if valid type)
+        else:
+            logger.info(
+                "No explicit evaluator LLM. Attempting fallback to Target's LLM."
             )
+            judge_llm = cast(BaseLLM | None, getattr(target, "llm", None))
+
+        if not judge_llm:
+            error_msg = (
+                "BIPIA Evaluator requires a Judge LLM! "
+                "Please provide 'llm' in evaluator config or "
+                "ensure target has an accessible 'llm' attribute."
+            )
+            logger.error(error_msg)
+            # We strictly enforce LLM presence now as requested
+            raise ValueError(error_msg)
+
         return BipiaEvaluator(judge_llm=judge_llm)
     else:
         raise ValueError(f"Unknown evaluator type: {config.type}")

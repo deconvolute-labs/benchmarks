@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from dcv_benchmark.models.config.target import TargetConfig
+from dcv_benchmark.models.config.target import LLMConfig, TargetConfig
 
 
 class SquadInputConfig(BaseModel):
@@ -43,6 +43,11 @@ class EvaluatorConfig(BaseModel):
     # For keyword (optional override)
     target_keyword: str | None = Field(
         default=None, description="Override the default target keyword."
+    )
+
+    # For judge-based evaluators (e.g. BIPIA)
+    llm: LLMConfig | None = Field(
+        default=None, description="LLM configuration for the evaluator."
     )
 
 

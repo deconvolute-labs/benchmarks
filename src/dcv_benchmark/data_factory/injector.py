@@ -74,6 +74,11 @@ class AttackInjector(BaseInjector):
     """
     Injects malicious payloads using various adversarial strategies
     defined in the config.
+
+    NOTE: This class is primarily used by the CLI 'data build' command
+    (via SquadBuilder) and relies on 'DataFactoryConfig' which is not
+    part of the runtime 'ExperimentConfig'. For runtime experiments,
+    we assume datasets are pre-built.
     """
 
     def __init__(self, config: DataFactoryConfig):
