@@ -1,0 +1,54 @@
+name: "squad_example"
+description: "Example for an end-to-end evaluation of the SDK with a RAG pipeline."
+version: "v1.0"
+
+# DATASET
+# First create base corpus using
+# 'dcb data download squad'
+# Then create the squad_config.yaml in /datasets/build/<dataset-name>
+# Finally create the experiment dataset: 
+# 'dcb data build workspace/datasets/built/squad_example_dataset/squad_config.yaml'
+# The value points to 'workspace/datasets/built/squad_example_dataset/dataset.json'
+dataset: "squad_example_dataset" 
+
+target:
+  name: "basic_rag" 
+  
+  # EXECUTION: Run Retrieval -> LLM Generation.
+  generate: true 
+
+  # DEFENSE:
+  defense:
+    ingestion:
+      signature_detector:
+        enabled: true
+
+    generation:
+      canary_detector:
+        enabled: true
+      language_detector:
+        enabled: true
+        settings:
+          allowed_languages: ["en"]
+
+  # Optional
+  # INFRASTRUCTURE: Nested Dictionary Style (Consistent)
+  # llm:
+  #   provider: "openai"
+  #   model: "gpt-4.1-mini"
+  #   temperature: 0.0
+
+  # embedding:
+  #   provider: "openai"
+  #   model: "text-embedding-3-small"
+  
+  # retriever:
+  #   provider: "chromadb"
+  #   k: 5
+
+  # PROMPTS
+  # Required for SQuAD
+  system_prompt:
+    key: "standard"
+  prompt_template:
+    key: "rag_standard_v1"

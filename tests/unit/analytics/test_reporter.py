@@ -34,7 +34,6 @@ def mock_config():
             "prompt_template": {"file": "t.yaml", "key": "k"},
             "pipeline_params": {},
         },
-        evaluators={},
     )
 
 

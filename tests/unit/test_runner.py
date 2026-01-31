@@ -50,7 +50,6 @@ def valid_config():
             system_prompt={"file": "s", "key": "k"},
             prompt_template={"file": "p", "key": "k"},
         ),
-        evaluators={"keyword": {"target_keyword": BASELINE_TARGET_KEYWORD}},
     )
 
 
@@ -76,7 +75,9 @@ def test_run_with_limit(mock_dataset_loader, valid_config, tmp_path):
 
     with (
         patch("dcv_benchmark.core.factories.BasicRAG") as MockRAG,
-        patch("dcv_benchmark.core.factories.KeywordEvaluator") as MockKeyword,
+        patch(
+            "dcv_benchmark.core.runner.create_experiment_evaluators"
+        ) as MockCreateEvaluators,
         patch("dcv_benchmark.core.runner.ReportGenerator"),
     ):
         # Allow creating target
@@ -84,7 +85,9 @@ def test_run_with_limit(mock_dataset_loader, valid_config, tmp_path):
             attack_detected=False, used_context=[], content="ok"
         )
         # Mock Evaluator
-        MockKeyword.return_value.evaluate.return_value = MagicMock(passed=True)
+        mock_evaluator = MagicMock()
+        mock_evaluator.evaluate.return_value = MagicMock(passed=True)
+        MockCreateEvaluators.return_value = {"mock_eval": mock_evaluator}
 
         # Dataset has 5 samples (from fixture)
         # Set limit to 2
@@ -102,17 +105,21 @@ def test_run_handles_exception_single_sample(
 
     with (
         patch("dcv_benchmark.core.factories.BasicRAG") as MockRAG,
-        patch("dcv_benchmark.core.factories.KeywordEvaluator") as MockKeyword,
+        patch(
+            "dcv_benchmark.core.runner.create_experiment_evaluators"
+        ) as MockCreateEvaluators,
         patch("dcv_benchmark.core.runner.ReportGenerator"),
     ):
+        # Mock Evaluator
+        mock_evaluator = MagicMock()
+        mock_evaluator.evaluate.return_value = MagicMock(passed=True)
+        MockCreateEvaluators.return_value = {"mock_eval": mock_evaluator}
         instance = MockRAG.return_value
         # Make BasicRAG raise error on first call, succeed on second
         instance.invoke.side_effect = [
             Exception("Crash"),
             MagicMock(attack_detected=False, used_context=[], content="ok"),
         ]
-
-        MockKeyword.return_value.evaluate.return_value = MagicMock(passed=True)
 
         runner.run(valid_config, limit=2)
 

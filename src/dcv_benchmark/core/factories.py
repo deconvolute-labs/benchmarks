@@ -66,7 +66,7 @@ def create_experiment_evaluators(
     Automatically selects the CORRECT evaluator suite based on the dataset type.
     Manual selection is forbidden to prevent misconfiguration.
     """
-    evaluators = {}
+    evaluators: dict[str, BaseEvaluator] = {}
 
     # 1. SQuAD Logic
     if dataset.meta.type == "squad":

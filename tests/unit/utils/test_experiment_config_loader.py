@@ -19,7 +19,6 @@ def valid_experiment_data():
             "defense": {"type": "deconvolute"},
             "llm": {"provider": "openai", "model": "gpt-4"},
         },
-        "evaluators": {"keyword": {"target_keyword": "KEY"}},
     }
 
 

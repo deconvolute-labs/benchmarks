@@ -28,7 +28,6 @@ def mock_dependencies():
                 "defense": {"ingestion": {}, "generation": {}},
             },
             "dataset": "test_dataset",
-            "evaluators": {"canary": {"type": "canary"}},
         }
 
         mock_yaml_load.return_value = mock_exp_dict

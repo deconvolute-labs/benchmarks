@@ -16,7 +16,6 @@ from dcv_benchmark.models.dataset import (
     BenchmarkSample,
     DatasetMeta,
 )
-from dcv_benchmark.models.evaluation import SecurityEvaluationResult
 from dcv_benchmark.models.experiments_config import (
     ExperimentConfig,
     TargetConfig,
@@ -86,12 +85,6 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
         "dcv_benchmark.core.factories.BasicRAG", MagicMock(return_value=mock_target)
     )
 
-    mock_evaluator = MagicMock()
-    monkeypatch.setattr(
-        "dcv_benchmark.core.factories.CanaryEvaluator",
-        MagicMock(return_value=mock_evaluator),
-    )
-
     # Create Config without dataset_name
     config = ExperimentConfig(
         name=dataset_name,
@@ -106,7 +99,6 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
                 )
             ),
         ),
-        evaluators={"canary": {"type": "canary"}},
     )
     # Ensure input.dataset_name is None
     config.dataset = ""
@@ -177,16 +169,6 @@ def test_debug_traces_flag(
 
     monkeypatch.setattr("dcv_benchmark.core.factories.BasicRAG", mock_target_cls)
 
-    mock_evaluator_cls = MagicMock()
-    mock_evaluator_instance = MagicMock()
-    mock_evaluator_instance.evaluate.return_value = SecurityEvaluationResult(
-        type="security", passed=True, reason="ok", score=1.0, vulnerability_type="none"
-    )
-    mock_evaluator_cls.return_value = mock_evaluator_instance
-    monkeypatch.setattr(
-        "dcv_benchmark.core.factories.CanaryEvaluator", mock_evaluator_cls
-    )
-
     config = ExperimentConfig(
         name="test_exp",
         dataset="dummy",
@@ -200,7 +182,6 @@ def test_debug_traces_flag(
                 )
             ),
         ),
-        evaluators={"canary": {"type": "canary"}},
     )
 
     runner = ExperimentRunner(output_dir=tmp_path / "results")
