@@ -1,0 +1,51 @@
+name: "bipia_example"
+description: "Example for an end-to-end evaluation of the SDK with a RAG pipeline."
+version: "v1.0"
+
+# DATASET
+# First create base corpus using
+# 'dcb data download bipia'
+# Then create the bipia_config.yaml in /datasets/build/<dataset-name>
+# Finally create the experiment dataset: 
+# 'dcb data build workspace/datasets/built/bipia_example_dataset/bipia_config.yaml'
+# The value points to 'workspace/datasets/built/bipia_example_dataset/dataset.json'
+dataset: "bipia_example_dataset"
+
+# For BIPIA evaluation
+judge_llm:
+  provider: "openai"
+  model: "gpt-4.1-mini"
+  temperature: 0.0
+
+target:
+  name: "basic_rag"
+  
+  # EXECUTION: Stop after Input Defenses (Simulated Ingestion).
+  generate: true
+
+  # DEFENSE
+  defense:
+    ingestion:
+      signature_detector:
+        enabled: true
+
+    generation:
+      # Explicitly disabled for clarity (though generate=false implies this)
+      canary_detector:
+        enabled: true
+      language_detector:
+        enabled: true
+
+  # Optional: INFRASTRUCTURE
+  # llm:
+  #   provider: "openai"
+  #   model: "gpt-4.1-mini"
+  #   temperature: 0.0
+
+  # embedding:
+  #   provider: "openai"
+  #   model: "text-embedding-3-small"
+  
+  # retriever:
+  #   provider: "chromadb"
+  #   k: 5
