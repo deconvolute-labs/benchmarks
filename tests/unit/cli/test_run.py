@@ -21,18 +21,16 @@ def mock_dependencies():
             "name": "test_experiment",
             "version": "1.0.0",
             "description": "test",
-            "scenario": {"id": "test_scenario"},
             "target": {
                 "name": "canary",
                 "system_prompt": {"file": "prompts.yaml", "key": "default"},
                 "prompt_template": {"file": "templates.yaml", "key": "default"},
-                "defense": {"required_version": None},
+                "defense": {"ingestion": {}, "generation": {}},
             },
-            "input": {"dataset_name": "test_dataset", "type": "squad"},
-            "evaluator": {"type": "canary"},
+            "dataset": "test_dataset",
         }
 
-        mock_yaml_load.return_value = {"experiment": mock_exp_dict}
+        mock_yaml_load.return_value = mock_exp_dict
 
         yield {
             "setup_logger": mock_setup_logger,
@@ -73,13 +71,8 @@ def test_run_experiment_file_not_found(mock_dependencies):
         "Experiment config file not found: non_existent/experiment.yaml"
     )
 
-
-def test_run_experiment_invalid_config_format(mock_dependencies):
-    """Test exit when config format is invalid (missing 'experiment' key)."""
-    args = argparse.Namespace(
-        config="dummy_path/experiment.yaml", debug_traces=False, limit=None
-    )
-    mocks = mock_dependencies
+    # It calls sys.exit(1) on failure
+    # and logs "Failed to parse experiment config: ..."
 
     # Setup invalid config
     mocks["yaml_load"].return_value = {"invalid": "key"}
@@ -88,6 +81,8 @@ def test_run_experiment_invalid_config_format(mock_dependencies):
         with pytest.raises(SystemExit):
             handle_run(args)
 
-    mocks["logger"].error.assert_called_with(
-        "Invalid config format: Missing top-level 'experiment' key."
-    )
+    # We check that logger.error was called with the new message format
+    # The exact string depends on Pydantic error, so we check if called.
+    assert mocks["logger"].error.called
+    args, _ = mocks["logger"].error.call_args
+    assert "Failed to parse experiment config" in args[0]

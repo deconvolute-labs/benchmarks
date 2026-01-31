@@ -87,14 +87,8 @@ def build_data(
     dataset_type = raw_yaml.get("type")
 
     if not dataset_type:
-        # Fallback for legacy configs that haven't been migrated yet
-        # We'll infer based on 'tasks' for now but warn
-        if "tasks" in raw_yaml:
-            logger.warning("Config missing 'type', inferring 'bipia' from 'tasks'.")
-            dataset_type = "bipia"
-        else:
-            logger.warning("Config missing 'type', inferring 'squad'.")
-            dataset_type = "squad"
+        logger.error("Invalid config: Missing required 'type' field (squad/bipia).")
+        sys.exit(1)
 
     if dataset_type == "bipia":
         _build_bipia(raw_yaml, name, overwrite)

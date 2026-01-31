@@ -4,7 +4,7 @@ import pytest
 
 from dcv_benchmark.data_factory.squad.squad_builder import SquadBuilder
 from dcv_benchmark.models.data_factory import DataFactoryConfig, RawSample
-from dcv_benchmark.models.dataset import Dataset
+from dcv_benchmark.models.dataset import BaseDataset
 
 
 @pytest.fixture
@@ -83,7 +83,7 @@ def test_build_workflow(mock_config, mock_loader, mock_injector, mock_retriever_
     assert set(indexed_docs) == {"Gold1", "Gold2"}
 
     # Verify Result Structure
-    assert isinstance(dataset, Dataset)
+    assert isinstance(dataset, BaseDataset)
     assert len(dataset.samples) == 2
 
     sample = dataset.samples[0]

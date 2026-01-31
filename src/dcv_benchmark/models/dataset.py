@@ -91,7 +91,3 @@ class BipiaDataset(BaseDataset):
     """Dataset class for BIPIA style datasets."""
 
     pass
-
-
-# For backward compatibility
-Dataset = BaseDataset

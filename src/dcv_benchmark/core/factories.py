@@ -1,21 +1,14 @@
-import re
 from typing import Any, cast
 
-from dcv_benchmark.components.llms import BaseLLM, create_llm
+from dcv_benchmark.components.llms import BaseLLM
 from dcv_benchmark.constants import (
-    AVAILABLE_EVALUATORS,
-    BASELINE_TARGET_KEYWORD,
     BUILT_DATASETS_DIR,
-    RAW_DATASETS_DIR,
 )
-from dcv_benchmark.data_factory.bipia.bipia_builder import BipiaBuilder
 from dcv_benchmark.evaluators.base import BaseEvaluator
 from dcv_benchmark.evaluators.bipia import BipiaEvaluator
-from dcv_benchmark.evaluators.canary import CanaryEvaluator
-from dcv_benchmark.evaluators.keyword import KeywordEvaluator
-from dcv_benchmark.evaluators.language import LanguageMismatchEvaluator
-from dcv_benchmark.models.config.experiment import EvaluatorConfig, ExperimentConfig
-from dcv_benchmark.models.dataset import BaseDataset, BipiaDataset, DatasetMeta
+from dcv_benchmark.evaluators.squad import SquadDefenseEvaluator
+from dcv_benchmark.models.config.experiment import ExperimentConfig
+from dcv_benchmark.models.dataset import BaseDataset
 from dcv_benchmark.targets.basic_rag import BasicRAG
 from dcv_benchmark.targets.basic_rag_guard import BasicRAGGuard
 from dcv_benchmark.utils.dataset_loader import DatasetLoader
@@ -28,84 +21,28 @@ def load_dataset(experiment_config: ExperimentConfig) -> BaseDataset:
     """
     Resolves and loads the input dataset based on the experiment configuration.
 
-    This factory handles two distinct workflows:
-    1. **BIPIA (Dynamic):** Builds the dataset in-memory on the fly using the
-       configured seed and tasks. No disk I/O is performed.
-    2. **SQuAD/Standard (Static):** Loads a pre-built JSON dataset from disk.
-       It attempts to locate the file in the standard `workspace/datasets/built`
-       directory, falling back to the experiment name if no specific dataset
-       name is provided.
-
-    Args:
-        experiment_config (ExperimentConfig): The full experiment configuration
-            containing the `input` section.
-
-    Returns:
-        BaseDataset: A populated dataset object (BipiaDataset or SquadDataset)
-        ready for the runner.
-
-    Raises:
-        ValueError: If the input type is unknown.
-        FileNotFoundError: If a static dataset cannot be found on disk.
+    Expects a simple folder name string.
+    Finds the dataset in workspace/datasets/built/{name}/dataset.json.
     """
-    input_config = experiment_config.input
+    dataset_name = experiment_config.dataset or experiment_config.name
 
-    # -- Case 1: BIPIA (On-the-fly build) --
-    if input_config.type == "bipia":
-        logger.info("Building BIPIA dataset in-memory...")
-        builder = BipiaBuilder(
-            raw_dir=RAW_DATASETS_DIR / "bipia", seed=input_config.seed
-        )
-        samples = builder.build(
-            tasks=input_config.tasks,
-            injection_pos=input_config.injection_pos,
-            max_samples=input_config.max_samples,
-        )
+    logger.info(f"Loading dataset: {dataset_name}...")
 
-        # Wrap in ephemeral BipiaDataset
-        dataset = BipiaDataset(
-            meta=DatasetMeta(
-                name=f"bipia_ephemeral_{experiment_config.name}",
-                type="bipia",
-                version="1.0.0-mem",
-                description="Ephemeral BIPIA dataset built from config",
-                author="Deconvolute Labs (Runtime)",
-            ),
-            samples=samples,
-        )
-        logger.info(f"Built BIPIA dataset with {len(samples)} samples.")
-        return dataset
+    # Primary path
+    fallback_path = BUILT_DATASETS_DIR / dataset_name / "dataset.json"
 
-    # -- Case 2: SQuAD / Standard (Load from disk) --
-    elif input_config.type == "squad":
-        # input_config is SquadInputConfig
-        dataset_name = input_config.dataset_name
-        if not dataset_name:
-            # Fallback: Use Experiment Name
-            logger.info(
-                "No dataset name in config. Attempting fallback to experiment name."
-            )
-            dataset_name = experiment_config.name
+    try:
+        dataset: BaseDataset = DatasetLoader(dataset_name).load()
+    except FileNotFoundError:
+        if fallback_path.exists():
+            logger.info(f"Using fallback path: {fallback_path}")
+            dataset = DatasetLoader(str(fallback_path)).load()
+        else:
+            logger.error(f"Dataset not found: {dataset_name}")
+            raise
 
-        fallback_path = BUILT_DATASETS_DIR / dataset_name / "dataset.json"
-
-        # Try loading via loader (which handles resolution)
-        try:
-            dataset: BaseDataset = DatasetLoader(dataset_name).load()  # type: ignore
-        except FileNotFoundError:
-            # Retry with direct fallback path to be helpful
-            if fallback_path.exists():
-                logger.info(f"Using fallback path: {fallback_path}")
-                dataset = DatasetLoader(str(fallback_path)).load()  # type: ignore
-            else:
-                raise
-
-        logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
-        logger.info(f"Description: {dataset.meta.description}")
-        return dataset
-
-    else:
-        raise ValueError(f"Unknown input config type: {input_config.type}")
+    logger.info(f"Loaded dataset: {dataset.meta.name} (v{dataset.meta.version})")
+    return dataset
 
 
 def create_target(experiment_config: ExperimentConfig) -> BasicRAG | BasicRAGGuard:
@@ -122,116 +59,33 @@ def create_target(experiment_config: ExperimentConfig) -> BasicRAG | BasicRAGGua
         )
 
 
-def _validate_baseline_payload(dataset: BaseDataset) -> None:
-    """Helper to validate dataset payload for Keyword evaluation."""
-    attack_info = dataset.meta.attack_info
-    if not attack_info:
-        logger.warning(
-            "Dataset metadata is missing 'attack_info'. Skipping validation."
-        )
-        return
+def create_experiment_evaluators(
+    experiment_config: ExperimentConfig, target: Any, dataset: BaseDataset
+) -> dict[str, BaseEvaluator]:
+    """
+    Automatically selects the CORRECT evaluator suite based on the dataset type.
+    Manual selection is forbidden to prevent misconfiguration.
+    """
+    evaluators: dict[str, BaseEvaluator] = {}
 
-    pattern = re.compile(rf"\b{re.escape(BASELINE_TARGET_KEYWORD)}\b")
-    if not pattern.search(attack_info.payload):
-        error_msg = (
-            "Configuration Mismatch! \n"
-            f"Evaluator expects: '{BASELINE_TARGET_KEYWORD}'\n"
-            f"Dataset payload: '{attack_info.payload}'"
+    # 1. SQuAD Logic
+    if dataset.meta.type == "squad":
+        logger.info("Configuration: Detected SQuAD. Using 'SquadDefenseEvaluator'.")
+        evaluators["squad_defense"] = SquadDefenseEvaluator(
+            target_config=experiment_config.target, dataset=dataset
         )
-        logger.error(error_msg)
-        raise ValueError(error_msg)
+        return evaluators
 
-    logger.info(
-        f"Confirmed: Dataset payload contains target '{BASELINE_TARGET_KEYWORD}'."
+    # 2. BIPIA Logic
+    if dataset.meta.type == "bipia":
+        logger.info("Configuration: Detected BIPIA. Using 'BipiaEvaluator'.")
+        # For BIPIA, we generally need the LLM to judge.
+        judge_llm = cast(BaseLLM | None, getattr(target, "llm", None))
+        evaluators["bipia_asr"] = BipiaEvaluator(judge_llm=judge_llm)
+        return evaluators
+
+    # Fallback / Warning
+    logger.warning(
+        f"No automated evaluators defined for dataset type: {dataset.meta.type}"
     )
-
-
-def create_evaluator(
-    config: EvaluatorConfig | None,
-    target: Any = None,
-    dataset: BaseDataset | None = None,
-) -> BaseEvaluator:
-    """
-    Instantiates the appropriate Evaluator based on the configuration.
-
-    This factory handles dependency resolution for complex evaluators:
-    - **Keyword**: Validates that the `dataset` metadata matches the expected keyword.
-    - **BIPIA**: Resolves the 'Judge LLM' by either using a specific config or
-        borrowing the `target`'s LLM if none is provided.
-
-    Args:
-        config (EvaluatorConfig | None): The evaluator section from the experiment YAML.
-        target (Any, optional): The instantiated Target system. Required for the
-            BIPIA evaluator if it needs to share the generator's LLM.
-        dataset (BaseDataset | None, optional): The loaded dataset. Required for
-            the Keyword evaluator to validate the attack payload.
-
-    Returns:
-        BaseEvaluator: An initialized evaluator instance.
-
-    Raises:
-        ValueError: If the config is missing or if required dependencies (like
-        an LLM for the BIPIA judge) cannot be resolved.
-    """
-    if config is None:
-        error_msg = (
-            "Missing Configuration: No evaluator specified.\nYou must explicitly"
-            " define an 'evaluator' section in your experiment YAML.\n"
-            f"Available types: {', '.join(AVAILABLE_EVALUATORS)}"
-        )
-        logger.error(error_msg)
-        raise ValueError(error_msg)
-
-    if config.type == "canary":
-        logger.info("Evaluator: Canary Defense Integrity")
-        return CanaryEvaluator()
-
-    elif config.type == "keyword":
-        if dataset:
-            _validate_baseline_payload(dataset)
-        kw = config.target_keyword or BASELINE_TARGET_KEYWORD
-        logger.info(f"Evaluator: Keyword (Target: '{kw}')")
-        return KeywordEvaluator(target_keyword=kw)
-
-    elif config.type == "language_mismatch":
-        logger.info(
-            f"Evaluator: Language Mismatch (Expected: {config.expected_language})"
-        )
-        try:
-            return LanguageMismatchEvaluator(
-                expected_language=config.expected_language,
-                strict=config.strict,
-            )
-        except ImportError as e:
-            logger.error("Missing dependencies for Language Evaluator.")
-            raise e
-    elif config.type == "bipia":
-        logger.info("Evaluator: BIPIA (LLM Judge + Pattern Match)")
-
-        judge_llm: BaseLLM | None = None
-
-        # Priority 1: Use explicit evaluator LLM config
-        if config.llm:
-            logger.info("Using explicit LLM config for BIPIA Judge.")
-            judge_llm = create_llm(config.llm)
-
-        # Priority 2: Fallback to Target's LLM (if valid type)
-        else:
-            logger.info(
-                "No explicit evaluator LLM. Attempting fallback to Target's LLM."
-            )
-            judge_llm = cast(BaseLLM | None, getattr(target, "llm", None))
-
-        if not judge_llm:
-            error_msg = (
-                "BIPIA Evaluator requires a Judge LLM! "
-                "Please provide 'llm' in evaluator config or "
-                "ensure target has an accessible 'llm' attribute."
-            )
-            logger.error(error_msg)
-            # We strictly enforce LLM presence now as requested
-            raise ValueError(error_msg)
-
-        return BipiaEvaluator(judge_llm=judge_llm)
-    else:
-        raise ValueError(f"Unknown evaluator type: {config.type}")
+    return evaluators

@@ -1,18 +1,10 @@
 from dcv_benchmark.models.config.defense import (
-    CanaryConfig,
     DefenseConfig,
-    LanguageConfig,
-    MLScannerConfig,
-    SignatureConfig,
+    DetectorConfig,
+    GenerationStageConfig,
+    IngestionStageConfig,
 )
-from dcv_benchmark.models.config.experiment import (
-    BipiaInputConfig,
-    EvaluatorConfig,
-    ExperimentConfig,
-    InputConfig,
-    ScenarioConfig,
-    SquadInputConfig,
-)
+from dcv_benchmark.models.config.experiment import ExperimentConfig
 from dcv_benchmark.models.config.target import (
     EmbeddingConfig,
     LLMConfig,
@@ -24,17 +16,11 @@ from dcv_benchmark.models.config.target import (
 
 __all__ = [
     "ExperimentConfig",
-    "InputConfig",
-    "SquadInputConfig",
-    "BipiaInputConfig",
-    "EvaluatorConfig",
-    "ScenarioConfig",
     "TargetConfig",
     "DefenseConfig",
-    "CanaryConfig",
-    "LanguageConfig",
-    "SignatureConfig",
-    "MLScannerConfig",
+    "DetectorConfig",
+    "IngestionStageConfig",
+    "GenerationStageConfig",
     "EmbeddingConfig",
     "RetrieverConfig",
     "LLMConfig",

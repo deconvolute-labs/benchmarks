@@ -22,7 +22,7 @@ def create_trace(sample_type="benign", passed=True, strategy=None, latency=0.1):
             "sample_type": sample_type,
             "attack_strategy": strategy,
             "latency_seconds": latency,
-            "evaluation": {"passed": passed},
+            "evaluations": {"default": {"passed": passed}},
         }
     )
 

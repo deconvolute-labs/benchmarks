@@ -19,18 +19,21 @@ def mock_config():
     return ExperimentConfig(
         name="test_run",
         description="A test run",
-        input={"dataset_name": "data.json", "type": "squad"},
+        dataset="squad_val",
         target={
             "name": "rag",
             "defense": {
-                "type": "deconvolute",
-                "layer": {"type": "a", "enabled": True, "settings": {}},
+                "ingestion": {},
+                "generation": {
+                    "canary_detector": {"enabled": True, "settings": {}},
+                    "language_detector": {"enabled": False, "settings": {}},
+                    "prompt_guard": {"enabled": False},
+                },
             },
             "system_prompt": {"file": "p.yaml", "key": "k"},
             "prompt_template": {"file": "t.yaml", "key": "k"},
             "pipeline_params": {},
         },
-        scenario={"id": "test_scenario"},
     )
 
 

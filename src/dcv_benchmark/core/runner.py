@@ -1,13 +1,15 @@
 import datetime
 from pathlib import Path
 
+from dcv_benchmark.analytics.calculators.security import SecurityMetricsCalculator
 from dcv_benchmark.analytics.reporter import ReportGenerator
 from dcv_benchmark.constants import TIMESTAMP_FORMAT
-from dcv_benchmark.core.factories import create_evaluator, create_target, load_dataset
-from dcv_benchmark.models.config.experiment import ExperimentConfig
-from dcv_benchmark.models.evaluation import (
-    BaseEvaluationResult,
+from dcv_benchmark.core.factories import (
+    create_experiment_evaluators,
+    create_target,
+    load_dataset,
 )
+from dcv_benchmark.models.config.experiment import ExperimentConfig
 from dcv_benchmark.models.responses import TargetResponse
 from dcv_benchmark.models.traces import TraceItem
 from dcv_benchmark.utils.logger import (
@@ -30,59 +32,43 @@ class ExperimentRunner:
         limit: int | None = None,
         debug_traces: bool = False,
     ) -> Path:
-        """
-        Executes the full experiment loop for a given configuration.
-
-        Orchestrates the loading of the dataset, initialization of the target system
-        (including defenses), and the evaluation of every sample. It records detailed
-        execution traces to JSONL and generates a final summary report.
-
-        Args:
-            experiment_config (ExperimentConfig): The complete configuration object
-                defining the input dataset, target system, and evaluator settings.
-            limit (int | None, optional): If provided, stops the experiment after
-                processing this many samples. Useful for "smoke testing" a config.
-                Defaults to None (process all samples).
-            debug_traces (bool, optional): If True, includes full user queries and
-                raw response content in the `traces.jsonl` output. If False, sensitive
-                content is redacted to save space and reduce noise. Defaults to False.
-
-        Returns:
-            Path: Directory path where the run artifacts (results.json, traces, plots)
-            have been saved.
-
-        Raises:
-            ValueError: If the dataset fails to load or the target cannot be initialized
-        """
         start_time = datetime.datetime.now()
-        run_id = start_time.strftime(TIMESTAMP_FORMAT)
-        run_dir = self.output_dir / f"run_{run_id}"
+        run_name = (
+            f"{experiment_config.name}_{experiment_config.version.replace('.', '-')}_"
+            f"{start_time.strftime(TIMESTAMP_FORMAT)}"
+        )
+        run_dir = self.output_dir / run_name
 
         print_experiment_header(experiment_config.model_dump())
-        logger.info(f"Starting Run: {run_id}")
+        logger.info(f"Starting Run: {run_name}")
         logger.info("Initializing components ...")
 
-        # 1. Load Dataset
+        # Load Dataset
         dataset = load_dataset(experiment_config)
-        print_dataset_header(experiment_config.input.model_dump())
+        print_dataset_header(dataset.meta)
 
-        # 2. Create Target
+        # Create Target
         target = create_target(experiment_config)
 
-        # 3. Create Evaluator
-        evaluator = create_evaluator(
-            experiment_config.evaluator, target=target, dataset=dataset
-        )
+        # Create Evaluators (Strict Auto-Config)
+        evaluators = create_experiment_evaluators(experiment_config, target, dataset)
+
+        if not evaluators:
+            logger.warning(
+                "⚠️ No evaluators were created! No metrics will be generated."
+            )
 
         # Prepare output
         if not run_dir.exists():
             run_dir.mkdir(parents=True, exist_ok=True)
         traces_path = run_dir / "traces.jsonl"
-        logger.info(f"Dataset: {len(dataset.samples)} samples. Output: {traces_path}")
+        logger.info(f"Dataset: {len(dataset.samples)} samples. Saving traces to:")
+        logger.info(f"{traces_path}")
 
         # Execution loop
         count = 0
         success_count = 0
+
         total_samples = len(dataset.samples)
         if limit:
             total_samples = min(total_samples, limit)
@@ -107,11 +93,6 @@ class ExperimentRunner:
                     f"(ID: {sample.id}) [{sample.sample_type}]"
                 )
 
-                if sample.sample_type == "attack":
-                    logger.debug(f"  > Strategy: {sample.attack_strategy}")
-
-                logger.debug("  > Invoking Target...")
-
                 try:
                     forced_context = (
                         [c.content for c in sample.context] if sample.context else None
@@ -125,20 +106,20 @@ class ExperimentRunner:
 
                     latency = (datetime.datetime.now() - t0).total_seconds()
 
-                    logger.debug("  > Evaluating Response...")
-                    eval_result: BaseEvaluationResult = evaluator.evaluate(
-                        response=response, sample=sample
-                    )
+                    # Evaluation Loop
+                    eval_results = {}
+                    sample_passed_all = True
 
-                    logger.debug(
-                        f"Eval result: {eval_result.model_dump_json(indent=2)}"
-                    )
+                    for eval_name, evaluator in evaluators.items():
+                        # We pass the response. If content is "Blocked",
+                        # evaluator handles it.
+                        res = evaluator.evaluate(response=response, sample=sample)
+                        eval_results[eval_name] = res
+                        if not res.passed:
+                            sample_passed_all = False
 
-                    if eval_result.passed:
-                        logger.debug(f"Sample {sample.id}: Passed!")
+                    if sample_passed_all:
                         success_count += 1
-                    else:
-                        logger.debug(f"Sample {sample.id}: Failed!")
 
                     trace = TraceItem(
                         sample_id=sample.id,
@@ -146,7 +127,7 @@ class ExperimentRunner:
                         attack_strategy=sample.attack_strategy,
                         user_query=sample.query if debug_traces else None,
                         response=response,
-                        evaluation=eval_result,
+                        evaluations=eval_results,
                         latency_seconds=latency,
                     )
 
@@ -166,19 +147,29 @@ class ExperimentRunner:
                 count += 1
 
         end_time = datetime.datetime.now()
-        logger.info(f"✅ Run Complete. Processed {count} samples.")
-        logger.info("Generating report...")
+        duration = (end_time - start_time).total_seconds()
 
+        # Quick Calculation for Summary
+        # We perform a calculation here to display the stats immediately
+        # The reporter will do it again for the full report, which is fine.
+        calculator = SecurityMetricsCalculator()
+        try:
+            metrics = calculator.calculate(traces_path)
+            print_run_summary(
+                metrics=metrics.global_metrics,
+                duration=duration,
+                artifacts_path=str(run_dir),
+            )
+        except Exception as e:
+            logger.warning(f"Could not print summary table: {e}")
+
+        # Report generation (Full Artifacts)
+        logger.info("Generating full report artifacts...")
         reporter = ReportGenerator(run_dir)
         reporter.generate(
             config=experiment_config, start_time=start_time, end_time=end_time
         )
 
-        print_run_summary(
-            total=count,
-            success=success_count,
-            duration=end_time - start_time,
-            artifacts_path=str(run_dir),
-        )
+        logger.info(f"Detailed results saved to: {run_dir}")
 
         return run_dir

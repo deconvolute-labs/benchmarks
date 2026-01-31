@@ -69,6 +69,11 @@ def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
 
+def _center_text(text: str, width: int = 90) -> str:
+    """Helper to center text within the standard width."""
+    return f"{text}".center(width)
+
+
 def print_experiment_header(config: dict[str, Any]) -> None:
     """
     Logs a standardized visual header for the experiment startup.
@@ -76,59 +81,106 @@ def print_experiment_header(config: dict[str, Any]) -> None:
     logger = get_logger(__name__)
 
     name = config.get("name", "Unnamed Experiment")
-    version = config.get("version", "N/A")
+    raw_version = config.get("version", "N/A")
+    # Remove 'v' prefix if present for cleaner display
+    version = raw_version.lstrip("v") if isinstance(raw_version, str) else raw_version
     desc = config.get("description", "")
 
-    # A visual separator block
-    logger.info("=" * 65)
-    logger.info("DECONVOLUTE BENCHMARK")
-    logger.info("=" * 65)
-    logger.info(f"Experiment:      {name}")
-    logger.info(f"Version:         {version}")
-    logger.info(f"DCV SDK version: {dcv_version}")
+    logger.info("=" * 90)
+    logger.info(_center_text("DECONVOLUTE BENCHMARK"))
+    logger.info("=" * 90)
+    logger.info(f"Experiment     : {name}")
+    logger.info(f"Version        : {version}")
+    logger.info(f"DCV SDK        : {dcv_version}")
     if desc:
-        logger.info(f"Description:     {desc}")
-    logger.info("=" * 65)
+        logger.info(f"Description    : {desc}")
+    logger.info("=" * 90)
 
 
-def print_run_summary(
-    total: int, success: int, duration: Any, artifacts_path: str
-) -> None:
+def print_dataset_header(meta: Any) -> None:
+    """
+    Prints a formatted header for the loaded dataset.
+    Accepts a DatasetMetadata object or a dict.
+    """
+    logger = get_logger(__name__)
+
+    # Handle Pydantic model or dict
+    if hasattr(meta, "model_dump"):
+        data = meta.model_dump()
+    else:
+        data = meta if isinstance(meta, dict) else {}
+
+    name = data.get("name", "Unnamed Dataset")
+    version = data.get("version", "")
+
+    # Attack Info is optional
+    attack_info = data.get("attack_info")
+    if attack_info:
+        strategy = attack_info.get("strategy", "Unknown")
+        rate = attack_info.get("rate", 0.0)
+        # Convert rate to percentage string
+        rate_str = f"{rate * 100:.0f}%"
+    else:
+        strategy = None
+        rate_str = None
+
+    logger.info("")
+    logger.info("=" * 90)
+    logger.info(_center_text(f"DATASET: {name} (version {version})"))
+    logger.info("-" * 90)
+
+    if strategy:
+        logger.info(f"Strategy       : {strategy.upper()}")
+        logger.info(f"Injection Rate : {rate_str}")
+    else:
+        logger.info("Type           : Benign / Validation Only")
+
+    logger.info("=" * 90)
+    logger.info("")
+
+
+def print_run_summary(metrics: Any, duration: float, artifacts_path: str) -> None:
     """
     Logs the final summary statistics of a benchmark run.
+    Expects a GlobalSecurityMetrics object.
     """
     logger = get_logger(__name__)
-    failed = total - success
-    pass_rate = (success / total * 100) if total > 0 else 0.0
+
+    # metrics is GlobalSecurityMetrics
+    total = metrics.total_samples
+
+    # Determine Status
+    # We consider it a 'Pass' if the system behaved as expected (High PNA, Low ASR)
+    # But for the summary, we just show the stats.
 
     logger.info("=" * 90)
-    logger.info("RUN COMPLETE")
-    logger.info("=" * 90)
-    logger.info(f"Total Samples:  {total}")
-    logger.info(f"Passed:         {success}")
-    logger.info(f"Failed:         {failed}")
-    logger.info(f"Pass Rate:      {pass_rate:.1f}%")
-    logger.info(f"Duration:       {duration}")
-    logger.info(f"Artifacts:      {artifacts_path}")
+    logger.info(_center_text("RUN COMPLETE"))
     logger.info("=" * 90)
 
-
-def print_dataset_header(config: dict[str, Any]) -> None:
-    """Prints a formatted header for the dataset generation."""
-    # We expect a DataFactoryConfig dumped as dict
-    name = config.get("dataset_name", "Unnamed Dataset")
-    strategy = config.get("attack_strategy", "Unknown")
-    corpus = config.get("source_file", "N/A")
-    rate = config.get("attack_rate", 0.0)
-
-    logger = get_logger(__name__)
-
-    logger.info("")
-    logger.info("=" * 90)
-    logger.info(f"DATASET GENERATION: {name}")
+    # 1. High Level Stats
+    logger.info(f"Duration       : {duration:.2f}s")
+    logger.info(f"Total Samples  : {total}")
+    logger.info(f"Avg Latency    : {metrics.avg_latency_seconds:.4f}s")
     logger.info("-" * 90)
-    logger.info(f"Corpus    : {corpus}")
-    logger.info(f"Strategy  : {strategy.upper()}")
-    logger.info(f"Inj. Rate : {rate * 100:.0f}%")
+
+    # 2. Security Metrics (The core KPIs)
+    # ASR: Attack Success Rate (Lower is better)
+    # PNA: Performance on No Attack (Higher is better)
+    logger.info(
+        f"ASR (Attack Success Rate)      : {metrics.asr_score:.2%}  (Lower is better)"
+    )
+    logger.info(
+        f"PNA (Benign Accuracy)          : {metrics.pna_score:.2%}  (Higher is better)"
+    )
+    logger.info("-" * 90)
+
+    # 3. Confusion Matrix Breakdown
+    # TP: Attacks Caught | FN: Attacks Missed
+    # TN: Benign Allowed | FP: Benign Blocked
+    logger.info(f"Attacks Caught (TP)            : {metrics.tp}")
+    logger.info(f"Attacks Missed (FN)            : {metrics.fn}")
+    logger.info(f"Benign Allowed (TN)            : {metrics.tn}")
+    logger.info(f"False Positives (FP)           : {metrics.fp}")
     logger.info("=" * 90)
-    logger.info("")
+    logger.info(f"Artifacts: {artifacts_path}")
+    logger.info("=" * 90)

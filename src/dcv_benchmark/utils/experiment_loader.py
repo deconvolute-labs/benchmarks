@@ -35,14 +35,12 @@ def load_experiment(path: Path) -> ExperimentConfig:
         logger.error(f"Failed to parse YAML: {e}")
         raise ValueError(f"Failed to parse YAML file: {e}") from e
 
-    if not raw_data or "experiment" not in raw_data:
-        raise ValueError(
-            f"Invalid experiment file at {path}: Missing top-level 'experiment' key."
-        )
+    if not raw_data:
+        raise ValueError(f"Invalid experiment file at {path}: Empty file.")
 
     try:
         # Validate against the Pydantic Schema
-        experiment = ExperimentConfig(**raw_data["experiment"])
+        experiment = ExperimentConfig(**raw_data)
         logger.debug(
             f"Experiment '{experiment.name}' loaded and validated successfully."
         )

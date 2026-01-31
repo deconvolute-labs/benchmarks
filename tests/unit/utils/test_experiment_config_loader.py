@@ -9,23 +9,16 @@ from dcv_benchmark.utils.experiment_loader import load_experiment
 @pytest.fixture
 def valid_experiment_data():
     return {
-        "experiment": {
-            "name": "test_exp",
-            "description": "test",
-            "input": {
-                "dataset_path": "data.json",
-                "type": "squad",
-                "dataset_name": "data.json",
-            },
-            "target": {
-                "name": "toy_rag",
-                "system_prompt": {"file": "prompts.yaml", "key": "promptA"},
-                "prompt_template": {"file": "templates.yaml", "key": "templateA"},
-                "defense": {"type": "deconvolute"},
-                "llm": {"provider": "openai", "model": "gpt-4"},
-            },
-            "scenario": {"id": "leakage"},
-        }
+        "name": "test_exp",
+        "description": "test",
+        "dataset": "squad_val",
+        "target": {
+            "name": "toy_rag",
+            "system_prompt": {"file": "prompts.yaml", "key": "promptA"},
+            "prompt_template": {"file": "templates.yaml", "key": "templateA"},
+            "defense": {"type": "deconvolute"},
+            "llm": {"provider": "openai", "model": "gpt-4"},
+        },
     }
 
 
@@ -42,7 +35,8 @@ def test_load_valid_config(experiment_file, valid_experiment_data):
     """It should load and return the experiment object."""
     experiment = load_experiment(experiment_file)
     assert experiment.name == "test_exp"
-    assert experiment.target.defense.type == "deconvolute"
+    assert experiment.name == "test_exp"
+    # assert experiment.target.defense.type == "deconvolute" # Field removed
 
 
 def test_file_not_found():
@@ -60,20 +54,10 @@ def test_invalid_yaml_syntax(tmp_path):
         load_experiment(p)
 
 
-def test_missing_top_level_key(tmp_path):
-    """It should raise ValueError if 'experiment' key is missing."""
-    p = tmp_path / "bad_structure.yaml"
-    with open(p, "w") as f:
-        yaml.dump({"wrong_key": {}}, f)
-
-    with pytest.raises(ValueError, match="Missing top-level 'experiment'"):
-        load_experiment(p)
-
-
 def test_validation_missing_required_section(tmp_path, valid_experiment_data):
     """It should detect missing required sections ( 'target')."""
     # Remove 'target' from the valid data
-    del valid_experiment_data["experiment"]["target"]
+    del valid_experiment_data["target"]
 
     p = tmp_path / "incomplete.yaml"
     with open(p, "w") as f:

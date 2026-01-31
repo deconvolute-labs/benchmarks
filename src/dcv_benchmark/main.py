@@ -15,9 +15,9 @@ def main() -> None:
 
     # Setup the main parser
     parser = argparse.ArgumentParser(
-        prog="dcv-benchmark",
+        prog="dcv-benchmarks",
         description=(
-            "Deconvolute AI Benchmarking Tool\n"
+            "Deconvolute Labs Benchmarking Tool\n"
             "Evaluate the Deconvolute SDK for RAG security and robustness against "
             "adversarial attacks."
         ),

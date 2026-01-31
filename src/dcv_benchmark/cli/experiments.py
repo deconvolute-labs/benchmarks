@@ -26,12 +26,8 @@ def run_experiment(
         with open(config_path, encoding="utf-8") as f:
             raw_config = yaml.safe_load(f)
 
-        # We expect the config to be under an 'experiment' key
-        if "experiment" not in raw_config:
-            logger.error("Invalid config format: Missing top-level 'experiment' key.")
-            sys.exit(1)
-
-        exp_config = ExperimentConfig(**raw_config["experiment"])
+        # We expect the config to be valid directly
+        exp_config = ExperimentConfig(**raw_config)
     except Exception as e:
         logger.error(f"Failed to parse experiment config: {e}")
         sys.exit(1)

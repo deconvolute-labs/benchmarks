@@ -35,5 +35,7 @@ class TraceItem(BaseModel):
     # The full execution result (contains output + used_context + defense signals)
     response: TargetResponse
 
-    # The score/grade
-    evaluation: SecurityEvaluationResult | BaseEvaluationResult = Field()
+    # The score/grade per evaluator
+    evaluations: dict[str, SecurityEvaluationResult | BaseEvaluationResult] = Field(
+        default_factory=dict
+    )

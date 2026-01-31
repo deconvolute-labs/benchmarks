@@ -8,7 +8,7 @@ from dcv_benchmark.models.experiments_config import EmbeddingConfig, RetrieverCo
 
 @pytest.fixture
 def chroma_config():
-    return RetrieverConfig(provider="chroma", top_k=3, chunk_size=500)
+    return RetrieverConfig(provider="chromadb", k=3, chunk_size=500)
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def test_create_chroma_store(chroma_config, embedding_config):
 
 def test_missing_configs_graceful_return():
     """It should return None if configs are missing."""
-    chroma_conf = RetrieverConfig(provider="chroma")
+    chroma_conf = RetrieverConfig(provider="chromadb")
     emb_conf = EmbeddingConfig(provider="mock", model="test")
 
     # Both missing
