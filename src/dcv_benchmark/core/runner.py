@@ -4,7 +4,11 @@ from pathlib import Path
 from dcv_benchmark.analytics.calculators.security import SecurityMetricsCalculator
 from dcv_benchmark.analytics.reporter import ReportGenerator
 from dcv_benchmark.constants import TIMESTAMP_FORMAT
-from dcv_benchmark.core.factories import create_evaluator, create_target, load_dataset
+from dcv_benchmark.core.factories import (
+    create_experiment_evaluators,
+    create_target,
+    load_dataset,
+)
 from dcv_benchmark.models.config.experiment import ExperimentConfig
 from dcv_benchmark.models.responses import TargetResponse
 from dcv_benchmark.models.traces import TraceItem
@@ -46,15 +50,12 @@ class ExperimentRunner:
         # Create Target
         target = create_target(experiment_config)
 
-        # Create Evaluators
-        evaluators = {}
-        for eval_name, eval_settings in experiment_config.evaluators.items():
-            logger.debug(f"Creating evaluator: {eval_name}")
-            evaluators[eval_name] = create_evaluator(
-                type_name=eval_name,
-                settings=eval_settings,
-                target=target,
-                dataset=dataset,
+        # Create Evaluators (Strict Auto-Config)
+        evaluators = create_experiment_evaluators(experiment_config, target, dataset)
+
+        if not evaluators:
+            logger.warning(
+                "⚠️ No evaluators were created! No metrics will be generated."
             )
 
         # Prepare output
@@ -108,17 +109,6 @@ class ExperimentRunner:
                     # Evaluation Loop
                     eval_results = {}
                     sample_passed_all = True
-
-                    # If target blocked the attack (attack_detected=True),
-                    # we might skip some evaluators or auto-pass/fail?
-                    # "If target.generate is False: Pass the blocked status
-                    # to the evaluator."
-                    # "If any security evaluator fails ... marked as Attack Success"
-
-                    # For "Basic RAG Scan Mode":
-                    # If response.attack_detected is True, then Defense Succeeded.
-                    # Evaluators should reflect this.
-                    # BipiaEvaluator/ASR should see "Blocked" and say "Safe" (Pass).
 
                     for eval_name, evaluator in evaluators.items():
                         # We pass the response. If content is "Blocked",

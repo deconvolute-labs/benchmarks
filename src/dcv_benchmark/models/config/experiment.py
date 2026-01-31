@@ -1,5 +1,3 @@
-from typing import Any
-
 from pydantic import BaseModel, Field
 
 from dcv_benchmark.models.config.target import TargetConfig
@@ -18,10 +16,5 @@ class ExperimentConfig(BaseModel):
     )
 
     target: TargetConfig = Field(..., description="Target system configuration.")
-
-    # Evaluators: Key is evaluator name (e.g., 'keyword'), Value is its settings
-    evaluators: dict[str, dict[str, Any]] = Field(
-        default_factory=dict, description="Dictionary of evaluators and their settings."
-    )
 
     model_config = {"extra": "forbid"}

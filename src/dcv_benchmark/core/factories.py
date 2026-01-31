@@ -1,16 +1,12 @@
-import re
 from typing import Any, cast
 
 from dcv_benchmark.components.llms import BaseLLM
 from dcv_benchmark.constants import (
-    BASELINE_TARGET_KEYWORD,
     BUILT_DATASETS_DIR,
 )
 from dcv_benchmark.evaluators.base import BaseEvaluator
 from dcv_benchmark.evaluators.bipia import BipiaEvaluator
-from dcv_benchmark.evaluators.canary import CanaryEvaluator
-from dcv_benchmark.evaluators.keyword import KeywordEvaluator
-from dcv_benchmark.evaluators.language import LanguageMismatchEvaluator
+from dcv_benchmark.evaluators.squad import SquadDefenseEvaluator
 from dcv_benchmark.models.config.experiment import ExperimentConfig
 from dcv_benchmark.models.dataset import BaseDataset
 from dcv_benchmark.targets.basic_rag import BasicRAG
@@ -63,106 +59,33 @@ def create_target(experiment_config: ExperimentConfig) -> BasicRAG | BasicRAGGua
         )
 
 
-def _validate_baseline_payload(dataset: BaseDataset) -> None:
-    """Helper to validate dataset payload for Keyword evaluation."""
-    attack_info = dataset.meta.attack_info
-    if not attack_info:
-        logger.warning(
-            "Dataset metadata is missing 'attack_info'. Skipping validation."
-        )
-        return
-
-    pattern = re.compile(rf"\b{re.escape(BASELINE_TARGET_KEYWORD)}\b")
-    if not pattern.search(attack_info.payload):
-        error_msg = (
-            "Configuration Mismatch! \n"
-            f"Evaluator expects: '{BASELINE_TARGET_KEYWORD}'\n"
-            f"Dataset payload: '{attack_info.payload}'"
-        )
-        logger.error(error_msg)
-        raise ValueError(error_msg)
-
-    logger.info(
-        f"Confirmed: Dataset payload contains target '{BASELINE_TARGET_KEYWORD}'."
-    )
-
-
-def create_evaluator(
-    type_name: str,
-    settings: dict[str, Any],
-    target: Any = None,
-    dataset: BaseDataset | None = None,
-) -> BaseEvaluator:
+def create_experiment_evaluators(
+    experiment_config: ExperimentConfig, target: Any, dataset: BaseDataset
+) -> dict[str, BaseEvaluator]:
     """
-    Instantiates an Evaluator based on type and settings dict.
+    Automatically selects the CORRECT evaluator suite based on the dataset type.
+    Manual selection is forbidden to prevent misconfiguration.
     """
+    evaluators = {}
 
-    if type_name == "canary":
-        logger.info("Evaluator: Canary Defense Integrity")
-        return CanaryEvaluator()
+    # 1. SQuAD Logic
+    if dataset.meta.type == "squad":
+        logger.info("Configuration: Detected SQuAD. Using 'SquadDefenseEvaluator'.")
+        evaluators["squad_defense"] = SquadDefenseEvaluator(
+            target_config=experiment_config.target, dataset=dataset
+        )
+        return evaluators
 
-    elif type_name == "keyword":
-        if dataset:
-            _validate_baseline_payload(dataset)
-        kw = settings.get("target_keyword") or BASELINE_TARGET_KEYWORD
-        logger.info(f"Evaluator: Keyword (Target: '{kw}')")
-        return KeywordEvaluator(target_keyword=kw)
-
-    elif type_name == "language":
-        # Supports "language" or "language_mismatch" alias?
-        # Plan said "language".
-        allowed = settings.get("allowed", ["en"])
-        # Use existing LanguageMismatchEvaluator or adapt it?
-        # The existing one takes expected_language (str).
-        # We might need to handle list vs str.
-        expected = allowed[0] if isinstance(allowed, list) and allowed else "en"
-        strict = settings.get("strict", True)
-
-        logger.info(f"Evaluator: Language (Expected: {expected}, Strict: {strict})")
-        return LanguageMismatchEvaluator(expected_language=expected, strict=strict)
-
-    elif type_name == "bipia":
-        # attack_success_rate evaluator mentioned in plan as separate?
-        # "The 'attack_success_rate' evaluator calculates..."
-        # But here we might map "attack_success_rate" to BipiaEvaluator
-        # or something new.
-        # But `BipiaEvaluator` exists.
-        pass
-
-    # The plan mentions "attack_success_rate" in the BIPIA config example.
-    if type_name == "attack_success_rate":
-        # Maybe map to BipiaEvaluator?
-        # Or is it a generic one?
-        # "BipiaEvaluator" class seems to do judge logic.
-        # Let's assume for now it's BipiaEvaluator but renamed in config.
-        # Or I should look for AttackSuccessRateEvaluator?
-        # I will map it to BipiaEvaluator logic if possible, or create a new one?
-        # Wait, BipiaEvaluator requires LLM to judge.
-        # If ASR is just counting blocks vs success?
-        # If generate=False, BipiaEvaluator might not work if it expects generation.
-        # I will map it to Bipia for now but check if I need to adjust it.
-        logger.info("Evaluator: ASR (using BipiaEvaluator logic)")
-
-        judge_llm = None
-        # Check for LLM in settings (unlikely for simple ASR but possible)
-        # Using target LLM?
+    # 2. BIPIA Logic
+    if dataset.meta.type == "bipia":
+        logger.info("Configuration: Detected BIPIA. Using 'BipiaEvaluator'.")
+        # For BIPIA, we generally need the LLM to judge.
         judge_llm = cast(BaseLLM | None, getattr(target, "llm", None))
+        evaluators["bipia_asr"] = BipiaEvaluator(judge_llm=judge_llm)
+        return evaluators
 
-        # In scan mode (generate=False), target.llm is None.
-        # BipiaEvaluator (judge) relies on LLM to checks instructions.
-        # But if content is "Blocked", we don't need LLM.
-        # BipiaEvaluator needs to be robust to missing LLM if content is blocked?
-
-        if not judge_llm:
-            # For ASR in scan mode, we might not need a judge if we just check
-            # for "Blocked" string?
-            # BipiaEvaluator usually uses an LLM to check if the attack succeeded
-            # (i.e. if the output followed instructions).
-            # If blocked, it failed.
-            # Pass a mock or allow None?
-            pass
-
-        # The existing BipiaEvaluator explicitly requests judge_llm.
-        return BipiaEvaluator(judge_llm=judge_llm)
-
-    raise ValueError(f"Unknown evaluator type: {type_name}")
+    # Fallback / Warning
+    logger.warning(
+        f"No automated evaluators defined for dataset type: {dataset.meta.type}"
+    )
+    return evaluators
