@@ -12,8 +12,8 @@ from dcv_benchmark.models.config.defense import (
 )
 from dcv_benchmark.models.dataset import (
     AttackInfo,
+    BaseDataset,
     BenchmarkSample,
-    Dataset,
     DatasetMeta,
 )
 from dcv_benchmark.models.evaluation import SecurityEvaluationResult
@@ -144,7 +144,7 @@ def test_debug_traces_flag(
     """
     Test that debug_traces=False hides content, and True shows it.
     """
-    mock_dataset = Dataset(
+    mock_dataset = BaseDataset(
         meta=DatasetMeta(
             name="test",
             type="squad",

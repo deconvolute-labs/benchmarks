@@ -165,8 +165,4 @@ def create_evaluator(
         # The existing BipiaEvaluator explicitly requests judge_llm.
         return BipiaEvaluator(judge_llm=judge_llm)
 
-    # Fallback / Legacy mapping
-    if type_name == "bipia":
-        return BipiaEvaluator(judge_llm=getattr(target, "llm", None))
-
     raise ValueError(f"Unknown evaluator type: {type_name}")

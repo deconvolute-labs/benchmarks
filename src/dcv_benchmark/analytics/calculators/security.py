@@ -62,16 +62,9 @@ class SecurityMetricsCalculator(BaseMetricsCalculator):
                 # Update for multiple evaluations: Pass if ALL evaluators pass.
                 evaluations = data.get("evaluations", {})
                 if not evaluations:
-                    # Fallback for legacy traces or empty evaluation
-                    # (should not happen usually)
-                    # Or check if old 'evaluation' key exists
-                    legacy_eval = data.get("evaluation")
-                    if legacy_eval:
-                        system_safe = legacy_eval["passed"]
-                    else:
-                        # No evaluation? Assume fail or skip?
-                        # For now, if no evaluation, we count as fail to be safe
-                        system_safe = False
+                    # If no evaluations, we interpret this as a failure/unsafe
+                    # (or just no data)
+                    system_safe = False
                 else:
                     system_safe = all(e["passed"] for e in evaluations.values())
 

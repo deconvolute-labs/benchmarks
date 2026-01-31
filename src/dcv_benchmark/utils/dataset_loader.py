@@ -19,12 +19,6 @@ class DatasetLoader:
         1. If it ends safely in .json, checks if it exists as a path.
         2. Else, assumes it's a directory name in BUILT_DATASETS_DIR/name/dataset.json.
         """
-        # Direct path check (backward compatibility)
-        if name.endswith(".json"):
-            direct_path = Path(name)
-            if direct_path.exists():
-                return direct_path
-
         # Convention-based check
         # workspace/datasets/built/{name}/dataset.json
         candidate = BUILT_DATASETS_DIR / name / "dataset.json"
@@ -32,7 +26,7 @@ class DatasetLoader:
         if candidate.exists():
             return candidate
 
-        return candidate if not name.endswith(".json") else Path(name)
+        return Path(name)
 
     def load(self) -> BaseDataset:
         """
@@ -73,7 +67,5 @@ class DatasetLoader:
             return SquadDataset(**raw_data)
 
         # Fallback/Default
-        # If no type, we assume it's a legacy SQuAD/Canary dataset or generic
-        # We inject the type to satisfy the strict schema
-        meta["type"] = "squad"
-        return SquadDataset(**raw_data)
+        # If no type, we now raise an error as strictly typed schemas are enforced.
+        raise ValueError("Invalid dataset: Missing 'meta.type' field (squad/bipia).")

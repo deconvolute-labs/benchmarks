@@ -26,9 +26,6 @@ RAW_DATASETS_DIR = DATASETS_DIR / "raw"
 BUILT_DATASETS_DIR = DATASETS_DIR / "built"
 CORPUS_DIR = RAW_DATASETS_DIR
 
-# Default Paths (Backward Compatibility / Defaults)
-DEFAULT_SYSTEM_PROMPTS_PATH = PROMPTS_DIR / "system_prompts.yaml"
-DEFAULT_TEMPLATES_PATH = PROMPTS_DIR / "templates.yaml"
 
 # Vulnerability Types
 VULNERABILITY_TYPE_DOS = "denial_of_service"

@@ -1,0 +1,37 @@
+name: "bipia_signature_stress_test"
+description: "Stress test of the Signature Detector against known injection attacks."
+version: "v1.0a1"
+
+# 1. Dataset
+dataset: "bipia_val"
+
+target:
+  name: "basic_rag"
+  
+  # EXECUTION: Stop after Input Defenses (Simulated Ingestion).
+  generate: false 
+
+  # DEFENSE
+  defense:
+    ingestion:
+      signature_detector:
+        enabled: true
+
+    generation:
+      # Explicitly disabled for clarity (though generate=false implies this)
+      prompt_guard:
+        enabled: false
+      canary_detector:
+        enabled: false
+      language_detector:
+        enabled: false
+
+  # INFRASTRUCTURE
+  # Omitted: generate=false means we don't need LLM/Embeddings.
+
+# EVALUATORS
+# evaluators:
+  # The "attack_success_rate" evaluator calculates:
+  # - ASR (Did attacks get through?)
+  # - FPR (Did valid data get blocked?)
+  # attack_success_rate: {}

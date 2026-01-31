@@ -19,6 +19,7 @@ from dcv_benchmark.models.responses import TargetResponse
 TEST_DATASET_CONTENT = {
     "meta": {
         "name": "Integration Test Set",
+        "type": "squad",
         "version": "1.0.0",
         "description": "4-quadrant test",
         "author": "Test",

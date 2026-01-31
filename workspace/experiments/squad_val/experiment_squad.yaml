@@ -1,0 +1,56 @@
+name: "squad_defense_validation"
+description: "End-to-End RAG validation. Tests if defenses block attacks while maintaining accuracy."
+version: "v1.2"
+
+# Dataset
+dataset: "squad_canary_v1"
+
+target:
+  name: "basic_rag" 
+  
+  # EXECUTION: Run Retrieval -> LLM Generation.
+  generate: true 
+
+  # DEFENSE:
+  defense:
+    ingestion:
+      signature_detector:
+        enabled: true
+
+    generation:
+      canary_detector:
+        enabled: true
+      language_detector:
+        enabled: true
+        settings:
+          allowed_languages: ["en", "es"]
+
+  # Optional
+  # INFRASTRUCTURE: Nested Dictionary Style (Consistent)
+  # llm:
+  #   provider: "openai"
+  #   model: "gpt-4.1-mini"
+  #   temperature: 0.0
+
+  # embedding:
+  #   provider: "openai"
+  #   model: "text-embedding-3-small"
+  
+  # retriever:
+  #   provider: "chromadb"
+  #   k: 5
+
+  # PROMPTS
+  # Required for SQuAD
+  system_prompt:
+    key: "standard" 
+  prompt_template:
+    key: "rag_standard_v1"
+
+# EVALUATORS:
+# Keys match the evaluator class names or registered types.
+evaluators:
+  language:
+    settings:
+      allowed_languages: ["en"] # Strict check for English in evaluation output
+  canary: {} # Empty settings

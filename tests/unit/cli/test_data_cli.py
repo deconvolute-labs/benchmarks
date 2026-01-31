@@ -73,6 +73,7 @@ def test_handle_build_success(mock_data_dependencies):
     # Setup mocks
     mocks["yaml_load"].return_value = {
         "dataset_name": "test_ds",
+        "type": "squad",
         "description": "Test description",
         "source_file": "corpus.json",
         "attack_strategy": "none",
@@ -104,6 +105,7 @@ def test_handle_build_overwrite_denied(mock_data_dependencies):
     mocks = mock_data_dependencies
     mocks["yaml_load"].return_value = {
         "dataset_name": "test_ds",
+        "type": "squad",
         "description": "Test description",
         "source_file": "corpus.json",
         "attack_strategy": "none",
@@ -130,6 +132,7 @@ def test_handle_build_overwrite_allowed(mock_data_dependencies):
     mocks = mock_data_dependencies
     mocks["yaml_load"].return_value = {
         "dataset_name": "test_ds",
+        "type": "squad",
         "description": "Test description",
         "source_file": "corpus.json",
         "attack_strategy": "none",

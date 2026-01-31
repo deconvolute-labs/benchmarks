@@ -1,7 +1,6 @@
 import json
 
 import pytest
-from pydantic import ValidationError
 
 from dcv_benchmark.utils.dataset_loader import DatasetLoader
 
@@ -11,6 +10,7 @@ def valid_dataset_json():
     return {
         "meta": {
             "name": "test_dataset",
+            "type": "squad",
             "version": "1.0",
             "description": "A test dataset",
             "author": "Test Author",
@@ -80,7 +80,7 @@ def test_validation_missing_fields(tmp_path, valid_dataset_json):
         json.dump(valid_dataset_json, f)
 
     loader = DatasetLoader(str(p))
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError, match="Invalid dataset"):
         loader.load()
 
 
