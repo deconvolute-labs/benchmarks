@@ -5,7 +5,7 @@ from dcv_benchmark.constants import (
     BUILT_DATASETS_DIR,
 )
 from dcv_benchmark.evaluators.base import BaseEvaluator
-from dcv_benchmark.evaluators.bipia import BipiaEvaluator
+from dcv_benchmark.evaluators.bipia import BipiaDefenseEvaluator
 from dcv_benchmark.evaluators.squad import SquadDefenseEvaluator
 from dcv_benchmark.models.config.experiment import ExperimentConfig
 from dcv_benchmark.models.dataset import BaseDataset
@@ -78,10 +78,10 @@ def create_experiment_evaluators(
 
     # 2. BIPIA Logic
     if dataset.meta.type == "bipia":
-        logger.info("Configuration: Detected BIPIA. Using 'BipiaEvaluator'.")
+        logger.info("Configuration: Detected BIPIA. Using 'BipiaDefenseEvaluator'.")
         # For BIPIA, we generally need the LLM to judge.
         judge_llm = cast(BaseLLM | None, getattr(target, "llm", None))
-        evaluators["bipia_asr"] = BipiaEvaluator(judge_llm=judge_llm)
+        evaluators["bipia_asr"] = BipiaDefenseEvaluator(judge_llm=judge_llm)
         return evaluators
 
     # Fallback / Warning

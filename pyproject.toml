@@ -25,6 +25,9 @@ data = [
 ]
 
 [dependency-groups]
+bipia = [
+    "emoji>=2.15.0",
+]
 dev = [
     "mypy>=1.19.1",
     "pytest-cov>=7.0.0",
