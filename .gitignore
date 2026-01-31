@@ -129,7 +129,13 @@ cython_debug/
 .DS_Store
 
 # App
-workspace/datasets/built/*/*.json
-workspace/datasets/raw/squad/*.json
-workspace/datasets/raw/bipia/
-workspace/experiments/archive/
+workspace/*
+!workspace/datasets/raw/squad/README.md
+!workspace/datasets/built/bipia_example/
+!workspace/datasets/built/squad_example/
+# workspace/datasets/built/*/*.json
+# workspace/datasets/raw/squad/*.json
+# workspace/datasets/raw/bipia/
+
+!workspace/experiments/bipia_example/
+!workspace/experiments/squad_example/

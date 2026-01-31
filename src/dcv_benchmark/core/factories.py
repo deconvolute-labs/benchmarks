@@ -1,6 +1,6 @@
-from typing import Any, cast
+from typing import Any
 
-from dcv_benchmark.components.llms import BaseLLM
+from dcv_benchmark.components.llms import BaseLLM, create_llm
 from dcv_benchmark.constants import (
     BUILT_DATASETS_DIR,
 )
@@ -79,8 +79,15 @@ def create_experiment_evaluators(
     # 2. BIPIA Logic
     if dataset.meta.type == "bipia":
         logger.info("Configuration: Detected BIPIA. Using 'BipiaDefenseEvaluator'.")
-        # For BIPIA, we generally need the LLM to judge.
-        judge_llm = cast(BaseLLM | None, getattr(target, "llm", None))
+
+        # Resolve Judge LLM (Strict: No Fallback)
+        judge_llm: BaseLLM | None = None
+        if experiment_config.judge_llm:
+            logger.info(
+                f"Initializing dedicated Judge LLM: {experiment_config.judge_llm.model}"
+            )
+            judge_llm = create_llm(experiment_config.judge_llm)
+
         evaluators["bipia_asr"] = BipiaDefenseEvaluator(judge_llm=judge_llm)
         return evaluators
 
