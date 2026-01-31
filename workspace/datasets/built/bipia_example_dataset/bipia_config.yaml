@@ -1,4 +1,5 @@
-dataset_name: bipia_val
+type: bipia
+dataset_name: bipia_example_dataset
 injection_pos: end
 max_samples: 50
 seed: 42
@@ -6,4 +7,3 @@ tasks:
 - email
 - code
 - table
-type: bipia

@@ -27,9 +27,10 @@ class LanguageMismatchEvaluator(BaseEvaluator):
     """
 
     def __init__(self, expected_language: str = "en", strict: bool = True):
+        # TODO: langdetect is now a default dependency.
         if detect is None:
             raise ImportError(
-                "Please install extras with 'pip install .[language]' "
+                "Please install extras with 'uv pip install .[language]' "
                 "to use LanguageMismatchEvaluator."
             )
         self.default_language = expected_language

@@ -25,7 +25,7 @@ def fetch_squad_subset(output_dir: Path, count: int = 300, seed: int = 42) -> No
     if load_dataset is None:
         raise ImportError(
             "The 'datasets' library is required for SQuAD. "
-            "Please install the data dependencies: pip install '.[data]'"
+            "Please install the data dependencies: uv pip install '.[data]'"
         )
 
     logger.info("Loading SQuAD (validation split) via HuggingFace...")

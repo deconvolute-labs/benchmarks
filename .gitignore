@@ -129,7 +129,40 @@ cython_debug/
 .DS_Store
 
 # App
-workspace/datasets/built/*/*.json
-workspace/datasets/raw/squad/*.json
-workspace/datasets/raw/bipia/
-workspace/experiments/archive/
+workspace/*
+
+# Allow traversing into datasets
+!workspace/datasets/
+workspace/datasets/*
+
+# Allow traversing into datasets/raw
+!workspace/datasets/raw/
+workspace/datasets/raw/*
+
+# Allow traversing into datasets/raw/squad
+!workspace/datasets/raw/squad/
+workspace/datasets/raw/squad/*
+
+# Whitelist the specific README
+!workspace/datasets/raw/squad/README.md
+
+# Allow traversing into datasets/built
+!workspace/datasets/built/
+workspace/datasets/built/*
+
+# Whitelist specific built datasets
+!workspace/datasets/built/bipia_example_dataset/
+!workspace/datasets/built/squad_example_dataset/
+
+# Allow traversing into experiments
+!workspace/experiments/
+workspace/experiments/*
+
+# Whitelist specific experiments
+!workspace/experiments/bipia_example/
+!workspace/experiments/squad_example/
+
+# Allow traversing into prompts
+!workspace/prompts/
+
+

@@ -118,8 +118,14 @@ class Plotter:
         fig, ax = plt.subplots(figsize=(8, 5))
 
         # Plot overlapping histograms
-        ax.hist(benign, bins=20, alpha=0.5, label="Benign", color="blue", density=True)
-        ax.hist(attack, bins=20, alpha=0.5, label="Attack", color="red", density=True)
+        if benign:
+            ax.hist(
+                benign, bins=20, alpha=0.5, label="Benign", color="blue", density=True
+            )
+        if attack:
+            ax.hist(
+                attack, bins=20, alpha=0.5, label="Attack", color="red", density=True
+            )
 
         ax.set_xlabel("Latency (seconds)")
         ax.set_ylabel("Density")
