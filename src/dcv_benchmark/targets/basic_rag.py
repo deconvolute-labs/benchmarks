@@ -1,3 +1,5 @@
+from typing import Any, Literal, cast
+
 from deconvolute import (
     CanaryDetector,
     LanguageDetector,
@@ -6,9 +8,10 @@ from deconvolute.detectors.content.language.models import LanguageResult
 from deconvolute.detectors.content.signature.engine import SignatureDetector
 from deconvolute.detectors.integrity.canary.models import CanaryResult
 
+from dcv_benchmark import defaults
 from dcv_benchmark.components.llms import BaseLLM, create_llm
 from dcv_benchmark.components.vector_store import create_vector_store
-from dcv_benchmark.models.experiments_config import TargetConfig
+from dcv_benchmark.models.config.target import LLMConfig, TargetConfig
 from dcv_benchmark.models.responses import TargetResponse
 from dcv_benchmark.targets.base import BaseTarget
 from dcv_benchmark.utils.logger import get_logger
@@ -37,78 +40,138 @@ class BasicRAG(BaseTarget):
         """
         super().__init__(config)
 
-        # Setup LLM
+        # 1. Initialization Logic (Lazy Loading based on 'generate' flag)
         self.llm: BaseLLM | None = None
-        if config.llm:
-            logger.debug(f"Initializing LLM: {config.llm.provider}")
-            self.llm = create_llm(config.llm)
+        self.vector_store: Any | None = None
+        self.system_prompt: str | None = None
+        self.prompt_template: str | None = None
 
-        # Setup vector store
-        self.vector_store = None
+        if config.generate:
+            self._init_generation_components(config)
+        else:
+            logger.info(
+                "Target [basic_rag]: Running in SCAN MODE (Generation Disabled)."
+            )
+
+        # 2. Defense Setup (Nested Stages)
+        self._init_defenses(config)
+
+    def _init_generation_components(self, config: TargetConfig) -> None:
+        """Initializes LLM, Retriever, and Prompts using defaults if necessary."""
+
+        # A. LLM
+        llm_config = config.llm
+        if not llm_config:
+            logger.info(
+                f"No LLM config provided. Using defaults: {defaults.DEFAULT_LLM_MODEL}"
+            )
+            llm_config = LLMConfig(
+                provider=cast(Literal["openai"], defaults.DEFAULT_LLM_PROVIDER),
+                model=defaults.DEFAULT_LLM_MODEL,
+                temperature=defaults.DEFAULT_LLM_TEMPERATURE,
+            )
+            # Update config for reporting (Effective Config)
+            self.config.llm = llm_config
+
+        logger.debug(f"Initializing LLM: {llm_config.provider} ({llm_config.model})")
+        self.llm = create_llm(llm_config)
+
+        # B. Vector Store (Retriever + Embeddings)
+        # We need both to support retrieval.
         if config.embedding and config.retriever:
             self.vector_store = create_vector_store(config.retriever, config.embedding)
             logger.debug("Vector Store initialized.")
-        else:
-            logger.debug("No Retriever configured. Running in Generator-only mode.")
+        elif config.retriever:
+            # Only retriever provided, not handled yet.
+            pass
 
-        # Setup Deconvolute defense
-        # 1. Canary Defense (LLM Input/Output Layer)
-        self.canary = CanaryDetector()
-        self.canary_enabled = False
-        if config.defense.canary and config.defense.canary.enabled:
-            self.canary_enabled = True
-            logger.info(
-                f"Defense [Canary]: ENABLED. Settings: {config.defense.canary.settings}"
-            )
+        # C. Prompts
+        # System Prompt
+        sys_key = (
+            config.system_prompt.key
+            if config.system_prompt
+            else defaults.DEFAULT_SYSTEM_PROMPT_KEY
+        )
+        sys_file = (
+            config.system_prompt.file
+            if config.system_prompt
+            else "prompts/system_prompts.yaml"
+        )
+        self.system_prompt = load_prompt_text(
+            path=sys_file or "prompts/system_prompts.yaml", key=sys_key
+        )
 
-        # 2. Language Defense (Output Layer)
-        self.language_detector: LanguageDetector | None = None
-        if config.defense.language and config.defense.language.enabled:
-            self.language_detector = LanguageDetector(
-                **config.defense.language.settings
-            )
-            logger.info(
-                "Defense [Language]: ENABLED. Config: "
-                f"{config.defense.language.settings}"
-            )
+        # Template
+        tpl_key = (
+            config.prompt_template.key
+            if config.prompt_template
+            else defaults.DEFAULT_TEMPLATE_KEY
+        )
+        tpl_file = (
+            config.prompt_template.file
+            if config.prompt_template
+            else "prompts/templates.yaml"
+        )
+        self.prompt_template = load_prompt_text(
+            path=tpl_file or "prompts/templates.yaml", key=tpl_key
+        )
 
-        # 3. Signature Defense (Ingestion Layer)
+    def _init_defenses(self, config: TargetConfig) -> None:
+        """Initializes defenses for ingestion and generation stages."""
+
+        # Stage 1: Ingestion
+        ingestion = config.defense.ingestion
+
+        # Signature Detector
         self.signature_detector: SignatureDetector | None = None
-        if config.defense.signature and config.defense.signature.enabled:
+        if ingestion.signature_detector.enabled:
+            # Pass **settings to override defaults
             self.signature_detector = SignatureDetector(
-                **config.defense.signature.settings
+                **ingestion.signature_detector.settings
             )
-            logger.info(
-                "Defense [Signature]: ENABLED. Config: "
-                f"{config.defense.signature.settings}"
+            logger.info("Defense [Ingestion/Signature]: ENABLED")
+
+        # Stage 2: Generation
+        generation = config.defense.generation
+
+        # Canary Detector
+        self.canary: CanaryDetector | None = None
+        if generation.canary_detector.enabled:
+            self.canary = CanaryDetector(**generation.canary_detector.settings)
+            logger.info("Defense [Generation/Canary]: ENABLED")
+
+        # Language Detector
+        self.language_detector: LanguageDetector | None = None
+        if generation.language_detector.enabled:
+            self.language_detector = LanguageDetector(
+                **generation.language_detector.settings
             )
+            logger.info("Defense [Generation/Language]: ENABLED")
 
-        # Load system prompt
-        self.system_prompt: str = load_prompt_text(
-            path=config.system_prompt.file,
-            key=config.system_prompt.key,
-        )
+    def _run_ingestion_checks(self, documents: list[str]) -> bool:
+        """
+        Runs ingestion-stage defenses (Signature) on a list of raw documents.
+        Returns True if ANY threat is detected (Blocked).
+        """
+        if not documents:
+            return False
 
-        # Load prompt template
-        self.prompt_template: str = load_prompt_text(
-            path=config.prompt_template.file,
-            key=config.prompt_template.key,
-        )
+        # Signature Check
+        if self.signature_detector:
+            for doc in documents:
+                result = self.signature_detector.check(doc)
+                if result.threat_detected:
+                    logger.info(
+                        f"Blocked by Signature: {getattr(result, 'metadata', '')}"
+                    )
+                    return True
+
+        return False
 
     def ingest(self, documents: list[str]) -> None:
         """
         Populates the target's vector store with the provided corpus.
-
-        This implementation simulates a standard RAG ingestion pipeline:
-        1. (Optional) Scans documents for threats using the configured Signature
-           detector.
-        2. Filters out blocked documents.
-        3. Indexes the safe documents into the ephemeral vector store.
-
-        Args:
-            documents (list[str]): The raw text content of the documents to index.
-                If the `retriever` config is missing, this operation is skipped with a
-                warning.
+        Filters out blocked documents during ingestion.
         """
         if not self.vector_store:
             logger.warning("Ingest called but no Vector Store is configured. Skipping.")
@@ -116,31 +179,19 @@ class BasicRAG(BaseTarget):
 
         safe_documents = []
         blocked_count = 0
-        total_docs = len(documents)
 
-        logger.info(f"Starting ingestion scan for {total_docs} documents...")
+        logger.info(f"Starting ingestion scan for {len(documents)} documents ...")
 
         for doc in documents:
-            is_clean = True
-
-            # Check 1: Signature
-            if self.signature_detector:
-                result = self.signature_detector.check(doc)
-                if result.threat_detected:
-                    is_clean = False
-                    logger.debug(
-                        "Doc blocked by SignatureDetector: "
-                        f"{getattr(result, 'metadata', 'N/A')}"
-                    )
-
-            if is_clean:
-                safe_documents.append(doc)
-            else:
+            # run_ingestion_checks returns True if BLOCKED
+            if self._run_ingestion_checks([doc]):
                 blocked_count += 1
+            else:
+                safe_documents.append(doc)
 
         logger.info(
             f"Ingestion Scan Complete: {len(safe_documents)} accepted, "
-            f"{blocked_count} blocked (Threats)."
+            f"{blocked_count} blocked."
         )
 
         if safe_documents:
@@ -153,160 +204,105 @@ class BasicRAG(BaseTarget):
         forced_context: list[str] | None = None,
         retrieve_only: bool = False,
     ) -> TargetResponse:
-        """
-        Orchestrates the RAG pipeline with Deconvolute defense layers.
-
-        Execution Flow:
-            1. **Retrieval**: Fetches context from the vector store OR uses
-               `forced_context`.
-            2. **Ingestion Scan** (if forced_context): Checks raw context against
-                signatures.
-            3. **Input Defense**: Injects the Canary token into the system prompt.
-            4. **Generation**: Calls the configured LLM.
-            5. **Output Defense (Canary)**: Verifies the presence of the Canary token.
-            6. **Output Defense (Language)**: Checks if the output matches the expected
-               language.
-
-        Args:
-            user_query (str): The end-user's input.
-            system_prompt (str | None, optional): Override for the system instruction.
-            forced_context (list[str] | None, optional): Bypasses retrieval to test
-                generation on specific (potentially malicious) chunks.
-            retrieve_only (bool, optional): If True, returns after retrieval/scanning
-                without invoking the LLM.
-
-        Returns:
-            TargetResponse: The model output, including `attack_detected` flags if
-            any defense layer (Signature, Canary, or Language) triggered.
-        """
-
-        original_system_prompt = system_prompt or self.system_prompt
-
-        # Retrieval step
+        # Context Retrieval / Resolution
         context_chunks = []
+        used_context = []
 
         if forced_context is not None:
-            # If we have a Signature Detector (Scanner),
-            # we check the raw docs here.
-            if self.signature_detector:
-                for chunk in forced_context:
-                    scan_result = self.signature_detector.check(chunk)
-
-                    if scan_result.threat_detected:
-                        # HIT: Threat detected on raw document.
-                        # We STOP here. No LLM call.
-                        logger.info(
-                            "Scan Defense triggered on raw context: "
-                            f"{scan_result.metadata}"
-                        )
-                        return TargetResponse(
-                            content="[Blocked by Signature Scan]",
-                            raw_content=None,
-                            used_context=forced_context,
-                            attack_detected=True,
-                            detection_reason=(
-                                f"Signature Scan: "
-                                f"{getattr(scan_result, 'metadata', 'Threat')}"
-                            ),
-                            metadata={"stage": "ingestion_scan"},
-                        )
-
-            # If we get here, the Scan missed (or no scanner enabled).
+            # When using forced_context, we treat it as "Ingestion" time for the check.
+            # E.g. simulating that these docs are entering the system.
+            if self._run_ingestion_checks(forced_context):
+                return TargetResponse(
+                    content="[Blocked by Ingestion Defenses]",
+                    raw_content=None,
+                    used_context=forced_context,
+                    attack_detected=True,
+                    detection_reason="Ingestion/Signature Block",
+                    metadata={"stage": "ingestion"},
+                )
             context_chunks = forced_context
+            used_context = forced_context
             logger.debug("Using forced context (Simulated Ingestion).")
-        elif self.vector_store:
-            context_chunks = self.vector_store.search(user_query)
-            logger.debug(f"Retrieved {len(context_chunks)} chunks.")
 
-        # 2. Check Generation Flag (The "Scan Mode" Support)
-        # If the user configured generate=False, we stop here.
-        # This covers the "Miss" case where we don't want to waste tokens on the LLM.
+        elif self.vector_store:
+            # If standard retrieval, we assume ingestion checks happened at
+            # ingest() time.
+            context_chunks = self.vector_store.search(user_query)
+            used_context = context_chunks
+
+        # Check Execution Mode
+        # If generate=False, we stop here (Scan Mode Simulation)
         if not self.config.generate or retrieve_only:
             return TargetResponse(
-                content="",  # Empty content
+                content="",
                 raw_content=None,
-                used_context=context_chunks,
-                attack_detected=False,  # We scanned, but found nothing
+                used_context=used_context,
+                attack_detected=False,
                 detection_reason=None,
-                metadata={"stage": "ingestion_scan", "skipped_generation": True},
+                metadata={"stage": "scan", "skipped_generation": True},
             )
 
-        # Defense: Canary injection (input side)
+        # Prompt Assembly & Canary Injection
+        effective_sys_prompt = system_prompt or self.system_prompt or ""
         canary_token = None
-        system_prompt_with_canary = original_system_prompt
-        if self.canary_enabled:
-            # SDK modifies the system prompt to include the hidden token instructions
-            system_prompt_with_canary, canary_token = self.canary.inject(
-                original_system_prompt
-            )
-            logger.debug("Canary token injected into system prompt.")
 
-        formatted_request_prompt = self.prompt_template.format(
-            query=user_query, context=context_chunks
-        )
+        if self.canary:
+            effective_sys_prompt, canary_token = self.canary.inject(
+                effective_sys_prompt
+            )
+
+        formatted_prompt = ""
+        if self.prompt_template:
+            formatted_prompt = self.prompt_template.format(
+                query=user_query, context=context_chunks
+            )
+        else:
+            # Fallback if no template (shouldn't happen with defaults)
+            logger.info("No prompt template provided. Using fallback ...")
+            formatted_prompt = f"{user_query}\n\nContext:\n{context_chunks}"
 
         # Generation
         if not self.llm:
-            logger.error("Invoke called but no LLM is configured.")
-            # Returning error message in content is safer for the runner loop.
             return TargetResponse(
-                content="Error: No LLM Configured", used_context=context_chunks
+                content="Error: No LLM Configured", used_context=used_context
             )
 
-        raw_response: str | None = self.llm.generate(
-            system_message=system_prompt_with_canary,
-            user_message=formatted_request_prompt,
+        raw_response = self.llm.generate(
+            system_message=effective_sys_prompt, user_message=formatted_prompt
         )
-
         if not raw_response:
             raise ValueError("LLM response is not a valid string!")
 
-        # Defense: Canary check (output side)
-        attack_detected = False
-        detection_reason = None
+        # Generation Defenses (Output Side)
         final_content = raw_response
-
-        # Metadata preparation
-        response_metadata = {
-            "model": self.config.llm.model if self.config.llm else "none",
+        attack_detected = False
+        reason = None
+        metadata: dict[str, Any] = {
+            "model": self.llm.config.model if self.llm else "unknown"
         }
 
-        if canary_token:
-            response_metadata["canary_token"] = canary_token
-
-        # Layer A: Canary Check
-        if self.canary_enabled and canary_token:
-            result: CanaryResult = self.canary.check(raw_response, token=canary_token)
-
-            if result.threat_detected:
+        # Canary Check
+        if self.canary and canary_token:
+            metadata["canary_token"] = canary_token
+            c_result: CanaryResult = self.canary.check(raw_response, token=canary_token)
+            if c_result.threat_detected:
                 attack_detected = True
-                detection_reason = "Canary Integrity Check Failed"
+                reason = "Canary Integrity Check Failed"
                 final_content = "Response blocked by Deconvolute."
             else:
-                # If safe, clean the token before passing to next layer
                 final_content = self.canary.clean(raw_response, canary_token)
 
-        # Layer B: Language Check (Daisy Chained)
-        # We only run this if the previous layer didn't block it
+        # Language Check
         if not attack_detected and self.language_detector:
-            # We pass reference_text to enable Mode B if the detector supports it
-            lang_result: LanguageResult = self.language_detector.check(
+            l_result: LanguageResult = self.language_detector.check(
                 content=final_content, reference_text=user_query
             )
+            if hasattr(l_result, "model_dump"):
+                metadata["language_check"] = l_result.model_dump()
 
-            # Store result in metadata for debugging/analysis
-            # Using dict() or model_dump() depending on Pydantic version in SDK
-            response_metadata["language_check"] = (
-                lang_result.model_dump()
-                if hasattr(lang_result, "model_dump")
-                else lang_result.__dict__
-            )
-
-            if lang_result.threat_detected:
+            if l_result.threat_detected:
                 attack_detected = True
-                detection_reason = (
-                    f"Language Policy Violation: {lang_result.detected_language}"
-                )
+                reason = f"Language Violation: {l_result.detected_language}"
                 final_content = "Response blocked by Deconvolute."
 
         return TargetResponse(
@@ -314,6 +310,6 @@ class BasicRAG(BaseTarget):
             raw_content=raw_response,
             used_context=context_chunks,
             attack_detected=attack_detected,
-            detection_reason=detection_reason,
-            metadata=response_metadata,
+            detection_reason=reason,
+            metadata=metadata,
         )

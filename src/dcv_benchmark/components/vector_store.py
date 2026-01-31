@@ -54,7 +54,7 @@ class ChromaVectorStore(BaseVectorStore):
             ret_config: Configuration for retrieval (e.g. top_k).
             emb_config: Configuration for the embedding model (provider, model name).
         """
-        self.top_k = ret_config.top_k
+        self.top_k = ret_config.k
         self.model = emb_config.model
         self.provider = emb_config.provider
 
@@ -132,7 +132,7 @@ def create_vector_store(
     if not ret_config or not emb_config:
         return None
 
-    if ret_config.provider == "chroma":
+    if ret_config.provider == "chromadb":
         return ChromaVectorStore(ret_config, emb_config)
     elif ret_config.provider == "mock":
         return None

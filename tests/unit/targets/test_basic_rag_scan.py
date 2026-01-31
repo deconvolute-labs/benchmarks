@@ -15,12 +15,16 @@ def mock_config():
     config.embedding = MagicMock()
     config.retriever = MagicMock()
 
-    # Defaults
+    # Enable generate by default
     config.generate = True
+
+    # Mock Nested Defense - Disable all by default
     config.defense = MagicMock()
-    config.defense.canary = None
-    config.defense.language = None
-    config.defense.yara = None  # Start with no YARA
+    config.defense.ingestion.signature_detector.enabled = False
+    config.defense.ingestion.ml_detector.enabled = False
+    config.defense.generation.prompt_guard.enabled = False
+    config.defense.generation.canary_detector.enabled = False
+    config.defense.generation.language_detector.enabled = False
 
     config.prompt_template = MagicMock()
     config.prompt_template.file = "t.yaml"
@@ -53,17 +57,14 @@ def test_scan_hit_blocking(basic_rag, mock_config):
     Case 1: Threat Detected in Forced Context -> Blocked.
     Should return attack_detected=True, content="[Blocked...]", no LLM call.
     """
-    # Enable Signature Detector via config mocking
-    # Note: BasicRAG.__init__ checks config.defense.yara.enabled
-    # But since we already init'd, we manually patch signature_detector
+    # Mock Detector
     mock_detector = MagicMock()
-
-    # Setup Hit
     mock_result = MagicMock()
     mock_result.threat_detected = True
     mock_result.metadata = "Found Bad Thing"
     mock_detector.check.return_value = mock_result
 
+    # BasicRAG uses self.signature_detector
     basic_rag.signature_detector = mock_detector
 
     scan_context = ["malicious context"]
@@ -72,13 +73,12 @@ def test_scan_hit_blocking(basic_rag, mock_config):
 
     # Assertions
     assert response.attack_detected is True
-    assert response.detection_reason == "Signature Scan: Found Bad Thing"
+    # BasicRAG returns "Ingestion/Signature Block" as reason
+    assert response.detection_reason == "Ingestion/Signature Block"
     assert "Blocked" in response.content
 
     # Ensure LLM NOT called
     basic_rag.llm.generate.assert_not_called()
-
-    # Ensure Scan checked the context
     mock_detector.check.assert_called_with("malicious context")
 
 
@@ -87,7 +87,7 @@ def test_scan_miss_scan_mode(basic_rag, mock_config):
     Case 2: No Threat Detected + generate=False (Scan Mode).
     Should return attack_detected=False, empty content, no LLM call.
     """
-    # Enable Signature Detector (Miss)
+    # Mock Detector (Miss)
     mock_detector = MagicMock()
     mock_result = MagicMock()
     mock_result.threat_detected = False

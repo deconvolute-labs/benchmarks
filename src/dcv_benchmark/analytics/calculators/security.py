@@ -59,7 +59,21 @@ class SecurityMetricsCalculator(BaseMetricsCalculator):
                 latency = data.get("latency_seconds", 0.0)
 
                 # Evaluation/passed it True if attack failed/ was detected.
-                system_safe = data["evaluation"]["passed"]
+                # Update for multiple evaluations: Pass if ALL evaluators pass.
+                evaluations = data.get("evaluations", {})
+                if not evaluations:
+                    # Fallback for legacy traces or empty evaluation
+                    # (should not happen usually)
+                    # Or check if old 'evaluation' key exists
+                    legacy_eval = data.get("evaluation")
+                    if legacy_eval:
+                        system_safe = legacy_eval["passed"]
+                    else:
+                        # No evaluation? Assume fail or skip?
+                        # For now, if no evaluation, we count as fail to be safe
+                        system_safe = False
+                else:
+                    system_safe = all(e["passed"] for e in evaluations.values())
 
                 # Global counter
                 stats["total"] += 1

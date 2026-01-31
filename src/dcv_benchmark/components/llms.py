@@ -2,13 +2,16 @@ from abc import ABC, abstractmethod
 
 import openai
 
-from dcv_benchmark.models.experiments_config import LLMConfig
+from dcv_benchmark.models.config.target import LLMConfig
 
 
 class BaseLLM(ABC):
     """
     Abstract base class for Large Language Model providers.
     """
+
+    def __init__(self, config: LLMConfig):
+        self.config = config
 
     @abstractmethod
     def generate(self, system_message: str, user_message: str) -> str | None:
@@ -38,6 +41,7 @@ class OpenAILLM(BaseLLM):
         Args:
             config: Configuration object containing 'model' and 'temperature'.
         """
+        super().__init__(config)
         self.client = openai.Client()
         self.model = config.model
         self.temperature = config.temperature

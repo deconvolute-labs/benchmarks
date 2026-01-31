@@ -5,6 +5,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from dcv_benchmark.core.runner import ExperimentRunner
+from dcv_benchmark.models.config.defense import (
+    DefenseConfig,
+    DetectorConfig,
+    GenerationStageConfig,
+)
 from dcv_benchmark.models.dataset import (
     AttackInfo,
     BenchmarkSample,
@@ -14,8 +19,6 @@ from dcv_benchmark.models.dataset import (
 from dcv_benchmark.models.evaluation import SecurityEvaluationResult
 from dcv_benchmark.models.experiments_config import (
     ExperimentConfig,
-    ScenarioConfig,
-    SquadInputConfig,
     TargetConfig,
 )
 from dcv_benchmark.models.responses import TargetResponse
@@ -92,18 +95,21 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
     # Create Config without dataset_name
     config = ExperimentConfig(
         name=dataset_name,
-        input=SquadInputConfig(type="squad", dataset_name="placeholder"),
+        dataset="placeholder",
         target=TargetConfig(
             name="basic_rag",
             system_prompt={"file": "foo", "key": "bar"},
             prompt_template={"file": "foo", "key": "bar"},
-            defense={"type": "deconvolute", "canary": {"enabled": True}},
+            defense=DefenseConfig(
+                generation=GenerationStageConfig(
+                    canary_detector=DetectorConfig(enabled=True)
+                )
+            ),
         ),
-        scenario=ScenarioConfig(id="test"),
-        evaluator={"type": "canary"},
+        evaluators={"canary": {"type": "canary"}},
     )
     # Ensure input.dataset_name is None
-    config.input.dataset_name = ""
+    config.dataset = ""
 
     # Run (dry run with 0 samples effectively)
     runner = ExperimentRunner(output_dir=tmp_path / "results")
@@ -113,6 +119,12 @@ def test_default_dataset_path_resolution(tmp_path, monkeypatch):
     mock_dataset_instance.meta.name = "mocked"
     mock_dataset_instance.meta.version = "1"
     mock_dataset_instance.meta.description = "mocked"
+    # Ensure model_dump returns dict with valid float
+    mock_dataset_instance.meta.model_dump.return_value = {
+        "name": "mocked",
+        "version": "1",
+        "attack_info": {"rate": 0.0},
+    }
     mock_dataset_instance.samples = []
 
     mock_loader_instance = MagicMock()
@@ -177,15 +189,18 @@ def test_debug_traces_flag(
 
     config = ExperimentConfig(
         name="test_exp",
-        input=SquadInputConfig(type="squad", dataset_name="dummy"),
+        dataset="dummy",
         target=TargetConfig(
             name="basic_rag",
             system_prompt={"file": "foo", "key": "bar"},
             prompt_template={"file": "foo", "key": "bar"},
-            defense={"type": "deconvolute", "canary": {"enabled": True}},
+            defense=DefenseConfig(
+                generation=GenerationStageConfig(
+                    canary_detector=DetectorConfig(enabled=True)
+                )
+            ),
         ),
-        scenario=ScenarioConfig(id="test"),
-        evaluator={"type": "canary"},
+        evaluators={"canary": {"type": "canary"}},
     )
 
     runner = ExperimentRunner(output_dir=tmp_path / "results")

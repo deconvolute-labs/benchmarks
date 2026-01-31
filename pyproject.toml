@@ -15,6 +15,7 @@ dependencies = [
 
 [project.scripts]
 dcv-bench = "dcv_benchmark.main:main"
+dcb = "dcv_benchmark.main:main"
 
 [project.optional-dependencies]
 data = [

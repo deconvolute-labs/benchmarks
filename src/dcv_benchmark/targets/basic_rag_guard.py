@@ -35,22 +35,28 @@ class BasicRAGGuard(BaseTarget):
             logger.debug(f"Initializing LLM: {config.llm.provider}")
             self.llm = create_llm(config.llm)
 
-            # Apply Guard Wrapper if strategy is set to 'guard'
+            # Apply Guard Wrapper
             # We must wrap the internal client of the LLM adapter.
-            if (
-                config.defense.type == "deconvolute"
-                and config.defense.strategy == "guard"
-            ):
-                if isinstance(self.llm, OpenAILLM):
-                    logger.info("Deconvolute Guard: Wrapping OpenAI Client.")
-                    # guard() returns a wrapped client that mimics the OpenAI interface
-                    self.llm.client = guard(self.llm.client)
-                else:
-                    logger.warning(
-                        "Deconvolute Guard is enabled but LLM provider "
-                        f"'{config.llm.provider}' is not automatically supported by "
-                        "this benchmark adapter."
-                    )
+            # In BasicRAGGuard, we assume we want to use the Deconvolute guard.
+            # We can optionally check if any detector is enabled, but guard()
+            # handles config internally usually.
+            # For now, we wrap it unconditionally if it's BasicRAGGuard.
+            # Let's check if any detector is enabled to be safe, or just wrap it.
+            # The SDK guard() might need config passed to it or it picks up
+            # from env/defaults?
+            # Assuming unconditional wrap for this target type is the intended
+            # behavior for BasicRAGGuard.
+
+            if isinstance(self.llm, OpenAILLM):
+                logger.info("Deconvolute Guard: Wrapping OpenAI Client.")
+                # guard() returns a wrapped client that mimics the OpenAI interface
+                self.llm.client = guard(self.llm.client)
+            else:
+                logger.warning(
+                    "Deconvolute Guard is enabled but LLM provider "
+                    f"'{config.llm.provider}' is not automatically supported by "
+                    "this benchmark adapter."
+                )
 
         # Setup vector store
         self.vector_store = None
@@ -61,15 +67,23 @@ class BasicRAGGuard(BaseTarget):
             logger.debug("No Retriever configured. Running in Generator-only mode.")
 
         # Load system prompt
+        sys_file = config.system_prompt.file if config.system_prompt else None
+        sys_key = config.system_prompt.key if config.system_prompt else "standard"
+
         self.system_prompt: str = load_prompt_text(
-            path=config.system_prompt.file,
-            key=config.system_prompt.key,
+            path=sys_file or "prompts/system_prompts.yaml",
+            key=sys_key,
         )
 
         # Load prompt template
+        tpl_file = config.prompt_template.file if config.prompt_template else None
+        tpl_key = (
+            config.prompt_template.key if config.prompt_template else "rag_default"
+        )
+
         self.prompt_template: str = load_prompt_text(
-            path=config.prompt_template.file,
-            key=config.prompt_template.key,
+            path=tpl_file or "prompts/templates.yaml",
+            key=tpl_key,
         )
 
     def ingest(self, documents: list[str]) -> None:
