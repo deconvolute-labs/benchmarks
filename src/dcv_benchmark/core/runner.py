@@ -13,6 +13,7 @@ from dcv_benchmark.models.config.experiment import ExperimentConfig
 from dcv_benchmark.models.responses import TargetResponse
 from dcv_benchmark.models.traces import TraceItem
 from dcv_benchmark.utils.logger import (
+    ExperimentProgressLogger,
     get_logger,
     print_dataset_header,
     print_experiment_header,
@@ -73,7 +74,9 @@ class ExperimentRunner:
         if limit:
             total_samples = min(total_samples, limit)
 
-        log_interval = max(1, total_samples // 10)
+        # Initialize Progress Logger
+        progress_logger = ExperimentProgressLogger(total_samples)
+        progress_logger.start()
 
         with open(traces_path, "w", encoding="utf-8") as f:
             for sample in dataset.samples:
@@ -81,12 +84,8 @@ class ExperimentRunner:
                     logger.info(f"Limit of {limit} reached.")
                     break
 
-                if (count + 1) % log_interval == 0 or (count + 1) == total_samples:
-                    pct = ((count + 1) / total_samples) * 100
-                    logger.info(
-                        f"Progress: {count + 1}/{total_samples} "
-                        f"({pct:.0f}%) samples processed."
-                    )
+                # Update Progress
+                progress_logger.log_progress(count, success_count)
 
                 logger.debug(
                     f"Processing Sample {count + 1}/{total_samples} "

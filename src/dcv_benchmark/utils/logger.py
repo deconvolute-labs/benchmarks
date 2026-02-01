@@ -1,3 +1,4 @@
+import datetime
 import logging
 import sys
 from typing import Any
@@ -184,3 +185,71 @@ def print_run_summary(metrics: Any, duration: float, artifacts_path: str) -> Non
     logger.info("=" * 90)
     logger.info(f"Artifacts: {artifacts_path}")
     logger.info("=" * 90)
+
+
+class ExperimentProgressLogger:
+    """
+    Handles logging of experiment progress, including start messages,
+    step updates, and ETA calculations.
+    """
+
+    def __init__(self, total_samples: int):
+        self.total_samples = total_samples
+        self.start_time = None
+        self.logger = get_logger(__name__)
+        # interval for logging progress (10%)
+        self.log_interval = max(1, self.total_samples // 10)
+
+    def start(self) -> None:
+        """
+        Logs the start of the experiment.
+        """
+
+        self.start_time = datetime.datetime.now()
+        self.logger.info(
+            f"🚀 [STARTED] Experiment started with {self.total_samples} samples."
+        )
+
+    def log_progress(self, current_count: int, success_count: int) -> None:
+        """
+        Logs progress if the current count hits the 10% interval or is the last sample.
+        Calculates ETA if the elapsed time is sufficient.
+        """
+
+        # Check if we should log (10% interval or last sample)
+        if (current_count) % self.log_interval == 0 or (
+            current_count
+        ) == self.total_samples:
+            pct = (current_count / self.total_samples) * 100
+            elapsed = datetime.datetime.now() - self.start_time
+
+            # success rate calculation
+            if current_count > 0:
+                success_rate = (success_count / current_count) * 100
+            else:
+                success_rate = 0.0
+
+            msg = (
+                f"🔄 [RUNNING] Progress: {current_count}/{self.total_samples} "
+                f"({pct:.0f}%) | Success Rate: {success_rate:.1f}%"
+            )
+
+            # ETA Calculation
+            # Only show ETA if we are past the first interval and it's taking some time
+            # This avoids ETA on super fast runs
+            seconds_elapsed = elapsed.total_seconds()
+            if seconds_elapsed > 5 and current_count < self.total_samples:
+                avg_time_per_sample = seconds_elapsed / current_count
+                remaining_samples = self.total_samples - current_count
+                eta_seconds = remaining_samples * avg_time_per_sample
+
+                # Format ETA
+                if eta_seconds < 60:
+                    eta_str = "< 1 min"
+                else:
+                    eta_min = int(eta_seconds // 60)
+                    eta_str = f"~{eta_min} min"
+
+                msg += f" | ETA: {eta_str}"
+
+            self.logger.info(msg)
