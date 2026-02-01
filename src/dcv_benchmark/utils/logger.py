@@ -194,9 +194,9 @@ class ExperimentProgressLogger:
     """
 
     def __init__(self, total_samples: int):
-        self.total_samples = total_samples
-        self.start_time = None
-        self.logger = get_logger(__name__)
+        self.total_samples: int = total_samples
+        self.start_time: datetime.datetime | None = None
+        self.logger: logging.Logger = get_logger(__name__)
         # interval for logging progress (10%)
         self.log_interval = max(1, self.total_samples // 10)
 
@@ -220,6 +220,9 @@ class ExperimentProgressLogger:
         if (current_count) % self.log_interval == 0 or (
             current_count
         ) == self.total_samples:
+            if self.start_time is None:
+                self.start_time = datetime.datetime.now()
+
             pct = (current_count / self.total_samples) * 100
             elapsed = datetime.datetime.now() - self.start_time
 
