@@ -161,7 +161,7 @@ workspace/experiments/*
 # Whitelist specific experiments
 !workspace/experiments/bipia_example/
 !workspace/experiments/squad_example/
-!workspace/experiments/squad_canary_naive_base64/
+!workspace/experiments/squad_naive_base64/
 
 # Allow traversing into prompts
 !workspace/prompts/
